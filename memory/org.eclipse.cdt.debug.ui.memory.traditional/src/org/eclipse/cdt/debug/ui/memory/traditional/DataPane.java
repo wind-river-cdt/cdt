@@ -343,6 +343,8 @@ public class DataPane extends AbstractPane
        	if(bytes[n] instanceof TraditionalMemoryByte)
        		if(((TraditionalMemoryByte) bytes[n]).isEdited())
        			anyByteEditing = true;
+       
+       // Shade alternate colors for readability
         
         if(isOdd(col))
     		gc.setForeground(fRendering.getTraditionalRendering().getColorText());
