@@ -46,7 +46,7 @@ public class GoToAddressBarWidget {
 	 * Character sequence that is unlikely to appear naturally in a recurring
 	 * debug context ID or memory space ID
 	 */
-	private static String SEPARATOR = "<seperator>";
+	private static String SEPARATOR = "<seperator>"; 
 	
 	/**
 	 * At a minimum, the expression history is kept on a per launch
