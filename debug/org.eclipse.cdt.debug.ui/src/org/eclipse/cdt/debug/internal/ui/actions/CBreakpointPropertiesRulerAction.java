@@ -12,18 +12,19 @@
 package org.eclipse.cdt.debug.internal.ui.actions;
 
 import org.eclipse.cdt.debug.core.model.ICBreakpoint;
-import org.eclipse.cdt.debug.internal.ui.CBreakpointContext;
 import org.eclipse.cdt.debug.internal.ui.ICDebugHelpContextIds;
 import org.eclipse.cdt.debug.internal.ui.IInternalCDebugUIConstants;
+import org.eclipse.cdt.debug.ui.breakpoints.CBreakpointPropertyDialogAction;
 import org.eclipse.debug.core.model.IBreakpoint;
 import org.eclipse.debug.ui.DebugUITools;
+import org.eclipse.debug.ui.contexts.IDebugContextListener;
+import org.eclipse.debug.ui.contexts.IDebugContextProvider;
 import org.eclipse.jface.text.source.IVerticalRulerInfo;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.ISelectionProvider;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.ui.IWorkbenchPart;
-import org.eclipse.ui.dialogs.PropertyDialogAction;
 
 /**
  * Opens a custom properties dialog to configure the attibutes of a C/C++ breakpoint 
@@ -31,7 +32,7 @@ import org.eclipse.ui.dialogs.PropertyDialogAction;
  */
 public class CBreakpointPropertiesRulerAction extends AbstractBreakpointRulerAction {
 
-	private Object fContext;
+    private ICBreakpoint fBreakpoint;
 
 	/**
 	 * Creates the action to modify the breakpoint properties.
@@ -47,38 +48,46 @@ public class CBreakpointPropertiesRulerAction extends AbstractBreakpointRulerAct
 	 * @see Action#run()
 	 */
 	public void run() {
-		if ( fContext != null ) {
-			PropertyDialogAction action = new PropertyDialogAction( getTargetPart().getSite(), new ISelectionProvider() {
-
-				public void addSelectionChangedListener( ISelectionChangedListener listener ) {
-				}
-
-				public ISelection getSelection() {
-					return new StructuredSelection( fContext );
-				}
-
-				public void removeSelectionChangedListener( ISelectionChangedListener listener ) {
-				}
-
-				public void setSelection( ISelection selection ) {
-				}
-			} );
-			action.run();
-			action.dispose();
-		}
+        if ( fBreakpoint != null ) {
+            final ISelection debugContext = getDebugContext();
+            
+            CBreakpointPropertyDialogAction propertiesAction = new CBreakpointPropertyDialogAction(
+                getTargetPart().getSite(), 
+                new ISelectionProvider() {
+                    public ISelection getSelection() {
+                        return new StructuredSelection( fBreakpoint );
+                    }
+                    public void addSelectionChangedListener( ISelectionChangedListener listener ) {}
+                    public void removeSelectionChangedListener( ISelectionChangedListener listener ) {}
+                    public void setSelection( ISelection selection ) {}
+                }, 
+                new IDebugContextProvider() {
+                    public ISelection getActiveContext() {
+                        return debugContext;
+                    }
+                    public void addDebugContextListener(IDebugContextListener listener) {}
+                    public void removeDebugContextListener(IDebugContextListener listener) {}
+                    public IWorkbenchPart getPart() { return null; }
+                    
+                }
+                );
+            propertiesAction.run();
+            propertiesAction.dispose();
+        }
 	}
 
 	/* (non-Javadoc)
 	 * @see IUpdate#update()
 	 */
 	public void update() {
-	    IBreakpoint breakpoint = getBreakpoint();
-	    if (breakpoint instanceof ICBreakpoint) {
-	        fContext = new CBreakpointContext((ICBreakpoint)breakpoint, getDebugContext());
-	    } else {
-	        fContext = breakpoint;
-	    }
-		setEnabled( fContext != null );
+        IBreakpoint breakpoint= getBreakpoint();
+        
+        if (breakpoint instanceof ICBreakpoint) {
+            fBreakpoint = (ICBreakpoint)breakpoint;
+        } else {
+            fBreakpoint = null;
+        }
+        setEnabled( fBreakpoint != null );
 	}
 	
 	private ISelection getDebugContext() {

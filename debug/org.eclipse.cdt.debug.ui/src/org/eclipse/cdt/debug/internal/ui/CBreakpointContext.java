@@ -40,7 +40,7 @@ public class CBreakpointContext extends PlatformObject {
     /**
      * Breakpoint object held by this context.
      */
-    private final ICBreakpoint fBreakpoint;
+    private final ICBreakpoint[] fBreakpoints;
     
     /**
      * The active debug context held by this context.
@@ -52,19 +52,27 @@ public class CBreakpointContext extends PlatformObject {
      * context selection.
      */
     public CBreakpointContext(ICBreakpoint breakpoint, ISelection debugContext) {
-        fBreakpoint = breakpoint;
-        fDebugContext = debugContext;
+        this (new ICBreakpoint[] { breakpoint }, debugContext );
     }
 
+    public CBreakpointContext(ICBreakpoint[] breakpoints, ISelection debugContext) {
+        fBreakpoints = breakpoints;
+        fDebugContext = debugContext;
+    }
+    
     /**
      * Returns the breakpoint.
      */
-    public ICBreakpoint getBreakpoint() { return fBreakpoint; }
+    public ICBreakpoint getBreakpoint() { return fBreakpoints[0]; }
     
+    public ICBreakpoint[] getBreakpoints() { return fBreakpoints; }
+
     /**
      * Returns the debug context.
      */
     public ISelection getDebugContext() { return fDebugContext; }
+    
+    
 }
 
 /**
