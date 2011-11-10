@@ -535,11 +535,13 @@ public class CodeFormatterTest extends BaseUITestCase {
 	//static void *f(){}
 	//static void * g();
 	//static void* h();
+	//int* (*a) [2];
 
 	//static void *f() {
 	//}
 	//static void * g();
 	//static void* h();
+	//int* (*a)[2];
 	public void testSpaceBetweenDeclSpecAndDeclarator() throws Exception {
 		assertFormatterResult();
 	}
@@ -2756,6 +2758,25 @@ public class CodeFormatterTest extends BaseUITestCase {
 	public void testEnum() throws Exception {
 		fOptions.put(DefaultCodeFormatterConstants.FORMATTER_TAB_CHAR, CCorePlugin.SPACE);
 		fOptions.put(DefaultCodeFormatterConstants.FORMATTER_COMMENT_MIN_DISTANCE_BETWEEN_CODE_AND_LINE_COMMENT, "2");
+		assertFormatterResult();
+	}
+
+	//#define TESTING(m) ;do{}while(0)
+	//void f() {
+	//	TESTING(1);
+	//	if(Test(a) != 1) {
+	//		status = ERROR;
+	//	}
+	//}
+
+	//#define TESTING(m) ;do{}while(0)
+	//void f() {
+	//	TESTING(1);
+	//	if (Test(a) != 1) {
+	//		status = ERROR;
+	//	}
+	//}
+	public void testDoWhileInMacro_Bug359658() throws Exception {
 		assertFormatterResult();
 	}
 }
