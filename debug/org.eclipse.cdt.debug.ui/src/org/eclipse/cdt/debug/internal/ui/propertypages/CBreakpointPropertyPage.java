@@ -12,10 +12,6 @@
  *******************************************************************************/
 package org.eclipse.cdt.debug.internal.ui.propertypages;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-
 import org.eclipse.cdt.debug.core.model.ICAddressBreakpoint;
 import org.eclipse.cdt.debug.core.model.ICBreakpoint;
 import org.eclipse.cdt.debug.core.model.ICEventBreakpoint;
@@ -30,11 +26,8 @@ import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
-import org.eclipse.core.resources.IWorkspaceRunnable;
-import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IAdaptable;
-import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.debug.core.model.ILineBreakpoint;
 import org.eclipse.jface.preference.BooleanFieldEditor;
 import org.eclipse.jface.preference.FieldEditor;
@@ -42,8 +35,6 @@ import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.preference.IntegerFieldEditor;
 import org.eclipse.jface.preference.StringFieldEditor;
-import org.eclipse.jface.util.IPropertyChangeListener;
-import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.IWorkbenchPropertyPage;
@@ -134,6 +125,10 @@ public class CBreakpointPropertyPage extends FieldEditorPreferencePage implement
 				super.doStore();
 			}
 		}
+		protected void doLoad()  {
+			String value = getPreferenceStore().getString(getPreferenceName());
+            setStringValue(value);
+		}
 
 		/**
 		 * @see FieldEditor#refreshValidState()
@@ -195,7 +190,7 @@ public class CBreakpointPropertyPage extends FieldEditorPreferencePage implement
 	 * The "fake" preference store used to interface between
 	 * the breakpoint and the breakpoint preference page.
 	 */
-	private CBreakpointPreferenceStore fCBreakpointPreferenceStore;
+//	private CBreakpointPreferenceStore fCBreakpointPreferenceStore;
 
 	/**
 	 * Constructor for CBreakpointPropertyPage.
@@ -205,7 +200,8 @@ public class CBreakpointPropertyPage extends FieldEditorPreferencePage implement
 	public CBreakpointPropertyPage() {
 		super( GRID );
 		noDefaultAndApplyButton();
-		fCBreakpointPreferenceStore = new CBreakpointPreferenceStore();
+//		Control control = getControl();
+//		fCBreakpointPreferenceStore = new CBreakpointPreferenceStore();
 	}
 
 	/*
@@ -216,7 +212,7 @@ public class CBreakpointPropertyPage extends FieldEditorPreferencePage implement
 	protected void createFieldEditors() {
 		ICBreakpoint breakpoint = getBreakpoint();
 		createMainLabel(breakpoint);
-		createContributetedFieldEditors(breakpoint);
+		createContributedFieldEditors(breakpoint);
 		createTypeSpecificLabelFieldEditors( breakpoint );
 		createEnabledField( getFieldEditorParent() );
 		IPreferenceStore store = getPreferenceStore();
@@ -225,11 +221,11 @@ public class CBreakpointPropertyPage extends FieldEditorPreferencePage implement
 			if ( condition == null ) {
 				condition = ""; //$NON-NLS-1$
 			}
-			store.setValue( CBreakpointPreferenceStore.CONDITION, condition );
+			store.setValue( ICBreakpoint.CONDITION, condition );
 			createConditionEditor( getFieldEditorParent() );
-			store.setValue( CBreakpointPreferenceStore.ENABLED, breakpoint.isEnabled() );
+			store.setValue( ICBreakpoint.ENABLED, breakpoint.isEnabled() );
 			int ignoreCount = breakpoint.getIgnoreCount();
-			store.setValue( CBreakpointPreferenceStore.IGNORE_COUNT, (ignoreCount >= 0) ? ignoreCount : 0 );
+			store.setValue( ICBreakpoint.IGNORE_COUNT, (ignoreCount >= 0) ? ignoreCount : 0 );
 			createIgnoreCountEditor( getFieldEditorParent() );
 		}
 		catch( CoreException ce ) {
@@ -317,7 +313,7 @@ public class CBreakpointPropertyPage extends FieldEditorPreferencePage implement
 			}
 
 			if (lNumber > 0) {
-				getPreferenceStore().setValue( CBreakpointPreferenceStore.LINE, lNumber);
+				getPreferenceStore().setValue( IMarker.LINE_NUMBER, lNumber);
 				createLineNumberEditor(getFieldEditorParent());
 			}
 		}
@@ -359,26 +355,26 @@ public class CBreakpointPropertyPage extends FieldEditorPreferencePage implement
 	}
 	protected void createLineNumberEditor( Composite parent ) {
 		 String title = PropertyPageMessages.getString( "CBreakpointPropertyPage.9" ); //$NON-NLS-1$
-		 BreakpointIntegerFieldEditor labelFieldEditor =new BreakpointIntegerFieldEditor( CBreakpointPreferenceStore.LINE ,title, parent);
+		 BreakpointIntegerFieldEditor labelFieldEditor =new BreakpointIntegerFieldEditor( IMarker.LINE_NUMBER ,title, parent);
 		 labelFieldEditor.setValidRange( 1, Integer.MAX_VALUE );
 		 addField( labelFieldEditor );
 	}
 	
 
 	protected void createEnabledField( Composite parent ) {
-		fEnabled = new BooleanFieldEditor( CBreakpointPreferenceStore.ENABLED, PropertyPageMessages.getString( "CBreakpointPropertyPage.19" ), parent ); //$NON-NLS-1$
+		fEnabled = new BooleanFieldEditor( ICBreakpoint.ENABLED, PropertyPageMessages.getString( "CBreakpointPropertyPage.19" ), parent ); //$NON-NLS-1$
 		addField( fEnabled );
 	}
 
 	protected void createConditionEditor( Composite parent ) {
-		fCondition = new BreakpointStringFieldEditor( CBreakpointPreferenceStore.CONDITION, PropertyPageMessages.getString( "CBreakpointPropertyPage.15" ), parent ); //$NON-NLS-1$
+		fCondition = new BreakpointStringFieldEditor( ICBreakpoint.CONDITION, PropertyPageMessages.getString( "CBreakpointPropertyPage.15" ), parent ); //$NON-NLS-1$
 		fCondition.setEmptyStringAllowed( true );
 		fCondition.setErrorMessage( PropertyPageMessages.getString( "CBreakpointPropertyPage.16" ) ); //$NON-NLS-1$
 		addField( fCondition );
 	}
 
 	protected void createIgnoreCountEditor( Composite parent ) {
-		fIgnoreCount = new BreakpointIntegerFieldEditor( CBreakpointPreferenceStore.IGNORE_COUNT, PropertyPageMessages.getString( "CBreakpointPropertyPage.17" ), parent ); //$NON-NLS-1$
+		fIgnoreCount = new BreakpointIntegerFieldEditor( ICBreakpoint.IGNORE_COUNT, PropertyPageMessages.getString( "CBreakpointPropertyPage.17" ), parent ); //$NON-NLS-1$
 		fIgnoreCount.setValidRange( 0, Integer.MAX_VALUE );
 		fIgnoreCountTextControl = fIgnoreCount.getTextControl( parent );
 		try {
@@ -399,6 +395,11 @@ public class CBreakpointPropertyPage extends FieldEditorPreferencePage implement
 		return ( element instanceof ICBreakpoint ) ? (ICBreakpoint)element : (ICBreakpoint)element.getAdapter(ICBreakpoint.class);
 	}
 
+	public IPreferenceStore getPreferenceStore() {
+		IAdaptable element = getElement();
+		return (IPreferenceStore) element.getAdapter(IPreferenceStore.class);
+	}
+	
 	/* (non-Javadoc)
 	 * @see org.eclipse.ui.IWorkbenchPropertyPage#getElement()
 	 */
@@ -413,66 +414,69 @@ public class CBreakpointPropertyPage extends FieldEditorPreferencePage implement
 		fElement = element;
 	}
 
-	public IPreferenceStore getPreferenceStore() {
-		return fCBreakpointPreferenceStore;
-	}
+//	public IPreferenceStore getPreferenceStore() {
+//		IPreferencePageContainer container = getContainer();
+//		IPreferenceStore store = container.getPreferenceStore();
+//		return fCBreakpointPreferenceStore;
+//	}
 
-	public boolean performOk() {
-		final List changedProperties = new ArrayList( 5 );
-		getPreferenceStore().addPropertyChangeListener( new IPropertyChangeListener() {
-
-			/**
-			 * @see IPropertyChangeListener#propertyChange(PropertyChangeEvent)
-			 */
-			public void propertyChange( PropertyChangeEvent event ) {
-				changedProperties.add( event.getProperty() );
-			}
-		} );
-		boolean result = super.performOk();
-		setBreakpointProperties( changedProperties );
-		return result;
-	}
-
-	protected void setBreakpointProperties( final List changedProperties ) {
-		IWorkspaceRunnable wr = new IWorkspaceRunnable() {
-
-			public void run( IProgressMonitor monitor ) throws CoreException {
-				ICBreakpoint breakpoint = getBreakpoint();
-				Iterator changed = changedProperties.iterator();
-				while( changed.hasNext() ) {
-					String property = (String)changed.next();
-					if ( property.equals( CBreakpointPreferenceStore.ENABLED ) ) {
-						breakpoint.setEnabled( getPreferenceStore().getBoolean( CBreakpointPreferenceStore.ENABLED ) );
-					}
-					else if ( property.equals( CBreakpointPreferenceStore.IGNORE_COUNT ) ) {
-						breakpoint.setIgnoreCount( getPreferenceStore().getInt( CBreakpointPreferenceStore.IGNORE_COUNT ) );
-					}
-					else if ( property.equals( CBreakpointPreferenceStore.CONDITION ) ) {
-						breakpoint.setCondition( getPreferenceStore().getString( CBreakpointPreferenceStore.CONDITION ) );
-					}
-					else if ( property.equals( CBreakpointPreferenceStore.LINE ) ) {
-						// already workspace runnable, setting markers are safe
-						breakpoint.getMarker().setAttribute(IMarker.LINE_NUMBER, getPreferenceStore().getInt(CBreakpointPreferenceStore.LINE));
-					} else {
-					    // this allow set attributes contributed by other plugins
-						String value = getPropertyAsString(property);
-						breakpoint.getMarker().setAttribute(property, value);
-					}
-				}
-			}
-		};
-		try {
-			ResourcesPlugin.getWorkspace().run( wr, null );
-		}
-		catch( CoreException ce ) {
-			CDebugUIPlugin.log( ce );
-		}
-	}
+//	public boolean performOk() {
+//		final List<String> changedProperties = new ArrayList<String>( 5 );
+//		getPreferenceStore().addPropertyChangeListener( new IPropertyChangeListener() {
+//
+//			/**
+//			 * @see IPropertyChangeListener#propertyChange(PropertyChangeEvent)
+//			 */
+//			public void propertyChange( PropertyChangeEvent event ) {
+//				changedProperties.add( event.getProperty() );
+//			}
+//		} );
+//		boolean result = super.performOk();
+//		setBreakpointProperties( changedProperties );
+//		return result;
+//	}
+//
+//	protected void setBreakpointProperties( final List changedProperties ) {
+//		IWorkspaceRunnable wr = new IWorkspaceRunnable() {
+//
+//			public void run( IProgressMonitor monitor ) throws CoreException {
+//				ICBreakpoint breakpoint = getBreakpoint();
+//				Iterator changed = changedProperties.iterator();
+//				while( changed.hasNext() ) {
+//					String property = (String)changed.next();
+//					if ( property.equals( CBreakpointPreferenceStore.ENABLED ) ) {
+//						breakpoint.setEnabled( getPreferenceStore().getBoolean( CBreakpointPreferenceStore.ENABLED ) );
+//					}
+//					else if ( property.equals( CBreakpointPreferenceStore.IGNORE_COUNT ) ) {
+//						breakpoint.setIgnoreCount( getPreferenceStore().getInt( CBreakpointPreferenceStore.IGNORE_COUNT ) );
+//					}
+//					else if ( property.equals( CBreakpointPreferenceStore.CONDITION ) ) {
+//						breakpoint.setCondition( getPreferenceStore().getString( CBreakpointPreferenceStore.CONDITION ) );
+//					}
+//					else if ( property.equals( CBreakpointPreferenceStore.LINE ) ) {
+//						// already workspace runnable, setting markers are safe
+//						breakpoint.getMarker().setAttribute(IMarker.LINE_NUMBER, getPreferenceStore().getInt(CBreakpointPreferenceStore.LINE));
+//					} else {
+//					    // this allow set attributes contributed by other plugins
+//						String value = getPropertyAsString(property);
+//						breakpoint.getMarker().setAttribute(property, value);
+//					}
+//				}
+//			}
+//		};
+//		try {
+//			ResourcesPlugin.getWorkspace().run( wr, null );
+//		}
+//		catch( CoreException ce ) {
+//			CDebugUIPlugin.log( ce );
+//		}
+//	}
+	
 	/**
 	 * Creates field editors contributed using breakpointUIContribution extension point
 	 * @param breakpoint
 	 */
-	private void createContributetedFieldEditors(ICBreakpoint breakpoint) {
+	private void createContributedFieldEditors(ICBreakpoint breakpoint) {
 		Composite parent = getFieldEditorParent();
 		try {
 			ICBreakpointsUIContribution cons[] = CBreakpointUIContributionFactory.getInstance()
@@ -492,16 +496,16 @@ public class CBreakpointPropertyPage extends FieldEditorPreferencePage implement
 
 	}
 
-	/**
-	 * Return string value of given property or null.
-	 */
-	protected String getPropertyAsString(String property) {
-		// currently only supports String and Integer
-		IPreferenceStore store = getPreferenceStore();
-		
-		if (store.contains(property)) {
-			String value = store.getString(property);
-			return value;
-		} else return null;
-	}
+//	/**
+//	 * Return string value of given property or null.
+//	 */
+//	protected String getPropertyAsString(String property) {
+//		// currently only supports String and Integer
+//		IPreferenceStore store = getPreferenceStore();
+//		
+//		if (store.contains(property)) {
+//			String value = store.getString(property);
+//			return value;
+//		} else return null;
+//	}
 }
