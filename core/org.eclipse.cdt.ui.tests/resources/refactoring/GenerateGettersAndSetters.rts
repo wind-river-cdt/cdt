@@ -3,7 +3,6 @@
 //@.config
 filename=C.h
 getters=name
-inHeader=true
 //@C.cpp
 #include "C.h"
 
@@ -31,7 +30,7 @@ public:
 
 	Person myFriend;
 
-	Person(int socSecNo); // contructor
+	Person(int socSecNo); // constructor
 
 	~Person(); // destructor
 
@@ -54,7 +53,7 @@ public:
 
 int gooo = 1;
 
-#endif /*C_H_*/
+#endif /* C_H_ */
 //=
 #ifndef C_H_
 #define C_H_
@@ -71,7 +70,7 @@ public:
 
 	Person myFriend;
 
-	Person(int socSecNo); // contructor
+	Person(int socSecNo); // constructor
 
 	~Person(); // destructor
 
@@ -98,13 +97,12 @@ public:
 
 int gooo = 1;
 
-#endif /*C_H_*/
+#endif /* C_H_ */
 //!Generate Getters and Setters One Getter Selection with Namespace
 //#org.eclipse.cdt.ui.tests.refactoring.gettersandsetters.GenerateGettersAndSettersTest
 //@.config
 filename=C.h
 getters=name
-inHeader=true
 //@C.cpp
 #include "C.h"
 
@@ -134,7 +132,7 @@ public:
 
 	Person myFriend;
 
-	Person(int socSecNo); // contructor
+	Person(int socSecNo); // constructor
 
 	~Person(); // destructor
 
@@ -159,7 +157,7 @@ public:
 
 int gooo = 1;
 
-#endif /*C_H_*/
+#endif /* C_H_ */
 
 //=
 #ifndef C_H_
@@ -179,7 +177,7 @@ public:
 
 	Person myFriend;
 
-	Person(int socSecNo); // contructor
+	Person(int socSecNo); // constructor
 
 	~Person(); // destructor
 
@@ -208,14 +206,13 @@ public:
 
 int gooo = 1;
 
-#endif /*C_H_*/
+#endif /* C_H_ */
 
 //!Generate Getters and Setters One Setter Selection
 //#org.eclipse.cdt.ui.tests.refactoring.gettersandsetters.GenerateGettersAndSettersTest
 //@.config
 filename=C.h
 setters=name
-inHeader=true
 //@C.cpp
 #include "C.h"
 
@@ -243,7 +240,7 @@ public:
 
 	Person myFriend;
 
-	Person(int socSecNo); // contructor
+	Person(int socSecNo); // constructor
 
 	~Person(); // destructor
 
@@ -267,7 +264,7 @@ public:
 
 int gooo = 1;
 
-#endif /*C_H_*/
+#endif /* C_H_ */
 //=
 #ifndef C_H_
 #define C_H_
@@ -284,7 +281,7 @@ public:
 
 	Person myFriend;
 
-	Person(int socSecNo); // contructor
+	Person(int socSecNo); // constructor
 
 	~Person(); // destructor
 
@@ -312,14 +309,13 @@ public:
 
 int gooo = 1;
 
-#endif /*C_H_*/
+#endif /* C_H_ */
 //!Generate Getters and Setters Getter and Setter Selection
 //#org.eclipse.cdt.ui.tests.refactoring.gettersandsetters.GenerateGettersAndSettersTest
 //@.config
 filename=C.h
 setters=name
 getters=name
-inHeader=true
 //@C.cpp
 #include "C.h"
 
@@ -347,7 +343,7 @@ public:
 
 	Person myFriend;
 
-	Person(int socSecNo); // contructor
+	Person(int socSecNo); // constructor
 
 	~Person(); // destructor
 
@@ -371,7 +367,7 @@ public:
 
 int gooo = 1;
 
-#endif /*C_H_*/
+#endif /* C_H_ */
 //=
 #ifndef C_H_
 #define C_H_
@@ -388,7 +384,7 @@ public:
 
 	Person myFriend;
 
-	Person(int socSecNo); // contructor
+	Person(int socSecNo); // constructor
 
 	~Person(); // destructor
 
@@ -420,14 +416,13 @@ public:
 
 int gooo = 1;
 
-#endif /*C_H_*/
+#endif /* C_H_ */
 //!Generate Getters and Setters Multiple Selection
 //#org.eclipse.cdt.ui.tests.refactoring.gettersandsetters.GenerateGettersAndSettersTest
 //@.config
 filename=C.h
 getters=name,systemId
 setters=name,systemId
-inHeader=true
 //@C.cpp
 #include "C.h"
 
@@ -455,7 +450,7 @@ public:
 
 	Person myFriend;
 
-	Person(int socSecNo); // contructor
+	Person(int socSecNo); // constructor
 
 	~Person(); // destructor
 
@@ -470,7 +465,7 @@ public:
 
 int gooo = 1;
 
-#endif /*C_H_*/
+#endif /* C_H_ */
 
 //=
 #ifndef C_H_
@@ -504,7 +499,7 @@ public:
 		this->systemId = systemId;
 	}
 
-	Person(int socSecNo); // contructor
+	Person(int socSecNo); // constructor
 
 	~Person(); // destructor
 
@@ -519,7 +514,7 @@ public:
 
 int gooo = 1;
 
-#endif /*C_H_*/
+#endif /* C_H_ */
 
 //!Generate Getters and Setters Visibility order 1
 //#org.eclipse.cdt.ui.tests.refactoring.gettersandsetters.GenerateGettersAndSettersTest
@@ -527,7 +522,6 @@ int gooo = 1;
 filename=GaS.h
 getters=i,ok
 setters=i,ok
-inHeader=true
 //@GaS.cpp
 #include "Getters.h"
 
@@ -593,7 +587,6 @@ private:
 filename=C.h
 getters=id
 setters=id
-inHeader=true
 //@C.h
 #ifndef C_H_
 #define C_H_
@@ -603,7 +596,7 @@ private:
 	int /*$*/id/*$$*/;
 };
 
-#endif /*C_H_*/
+#endif /* C_H_ */
 
 //=
 #ifndef C_H_
@@ -623,7 +616,7 @@ public:
 	}
 };
 
-#endif /*C_H_*/
+#endif /* C_H_ */
 
 //!Generate Getters and Setters no Methods
 //#org.eclipse.cdt.ui.tests.refactoring.gettersandsetters.GenerateGettersAndSettersTest
@@ -631,7 +624,6 @@ public:
 filename=C.h
 getters=i
 setters=i
-inHeader=true
 //@C.h
 /*
  * test.h
@@ -705,60 +697,44 @@ class test {
 #define TEST_H_
 
 //comment1
-class test
-{
+class test {
 	void test();
 	//comment3
 };
 
 #endif /* TEST_H_ */
 
-//!Generate Getters and Setters One Getter Selection Implementation in CPP
+//!Generate Getters and Setters, Pass by Reference, Separate Definition
 //#org.eclipse.cdt.ui.tests.refactoring.gettersandsetters.GenerateGettersAndSettersTest
 //@.config
 filename=C.h
 getters=name
-//@C.cpp
-#include "C.h"
-
-int Person::SocSecNo() {
-	return socSecNo;
-}
-
-int main(int argc, char** argv) {
-}
-
-//=
-#include "C.h"
-
-char* Person::getName() const {
-	return name;
-}
-
-int Person::SocSecNo() {
-	return socSecNo;
-}
-
-int main(int argc, char** argv) {
-}
-
+setters=name
+definitionSeparate=true
 //@C.h
 #ifndef C_H_
 #define C_H_
+
+struct FullName {
+	const char* first;
+	const char* last;
+	FullName(const FullName& other);
+	~FullName();
+};
 
 class Person {
 private:
 	int systemId;
 
 protected:
-	char* name;
+	FullName name;
 
 public:
 	const int socSecNo;
 
 	Person myFriend;
 
-	Person(int socSecNo); // contructor
+	Person(int socSecNo); // constructor
 
 	~Person(); // destructor
 
@@ -777,25 +753,33 @@ public:
 
 int gooo = 1;
 
-#endif /*C_H_*/
+#endif /* C_H_ */
 //=
 #ifndef C_H_
 #define C_H_
+
+struct FullName {
+	const char* first;
+	const char* last;
+	FullName(const FullName& other);
+	~FullName();
+};
 
 class Person {
 private:
 	int systemId;
 
 protected:
-	char* name;
+	FullName name;
 
 public:
 	const int socSecNo;
 
 	Person myFriend;
-	char* getName() const;
+	const FullName& getName() const;
+	void setName(const FullName& name);
 
-	Person(int socSecNo); // contructor
+	Person(int socSecNo); // constructor
 
 	~Person(); // destructor
 
@@ -814,12 +798,41 @@ public:
 
 int gooo = 1;
 
-#endif /*C_H_*/
-//!Generate Getters and Setters One Getter Selection with Namespace Implementation in CPP
+#endif /* C_H_ */
+//@C.cpp
+#include "C.h"
+
+int Person::SocSecNo() {
+	return socSecNo;
+}
+
+int main(int argc, char** argv) {
+}
+
+//=
+#include "C.h"
+
+const FullName& Person::getName() const {
+	return name;
+}
+
+void Person::setName(const FullName& name) {
+	this->name = name;
+}
+
+int Person::SocSecNo() {
+	return socSecNo;
+}
+
+int main(int argc, char** argv) {
+}
+
+//!Generate Getters and Setters One Getter Selection with Namespace Separate Definition
 //#org.eclipse.cdt.ui.tests.refactoring.gettersandsetters.GenerateGettersAndSettersTest
 //@.config
 filename=C.h
 getters=name
+definitionSeparate=true
 //@C.cpp
 #include "C.h"
 
@@ -870,7 +883,7 @@ public:
 
 	Person myFriend;
 
-	Person(int socSecNo); // contructor
+	Person(int socSecNo); // constructor
 
 	~Person(); // destructor
 
@@ -895,7 +908,7 @@ public:
 
 int gooo = 1;
 
-#endif /*C_H_*/
+#endif /* C_H_ */
 
 //=
 #ifndef C_H_
@@ -915,7 +928,7 @@ public:
 
 	Person myFriend;
 
-	Person(int socSecNo); // contructor
+	Person(int socSecNo); // constructor
 
 	~Person(); // destructor
 
@@ -941,13 +954,14 @@ public:
 
 int gooo = 1;
 
-#endif /*C_H_*/
+#endif /* C_H_ */
 
-//!Generate Getters and Setters One Setter Selection Implementation in CPP
+//!Generate Getters and Setters One Setter Selection Separate Definition
 //#org.eclipse.cdt.ui.tests.refactoring.gettersandsetters.GenerateGettersAndSettersTest
 //@.config
 filename=C.h
 setters=name
+definitionSeparate=true
 //@C.cpp
 #include "C.h"
 
@@ -990,7 +1004,7 @@ public:
 
 	Person myFriend;
 
-	Person(int socSecNo); // contructor
+	Person(int socSecNo); // constructor
 
 	~Person(); // destructor
 
@@ -1014,7 +1028,7 @@ public:
 
 int gooo = 1;
 
-#endif /*C_H_*/
+#endif /* C_H_ */
 //=
 #ifndef C_H_
 #define C_H_
@@ -1031,7 +1045,7 @@ public:
 
 	Person myFriend;
 
-	Person(int socSecNo); // contructor
+	Person(int socSecNo); // constructor
 
 	~Person(); // destructor
 
@@ -1056,13 +1070,14 @@ public:
 
 int gooo = 1;
 
-#endif /*C_H_*/
-//!Getter and Setter Selection Implementation in CPP
+#endif /* C_H_ */
+//!Getter and Setter Selection Separate Definition
 //#org.eclipse.cdt.ui.tests.refactoring.gettersandsetters.GenerateGettersAndSettersTest
 //@.config
 filename=C.h
 setters=name
 getters=name
+definitionSeparate=true
 //@C.cpp
 #include "C.h"
 
@@ -1107,7 +1122,7 @@ public:
 
 	Person myFriend;
 
-	Person(int socSecNo); // contructor
+	Person(int socSecNo); // constructor
 
 	~Person(); // destructor
 
@@ -1131,7 +1146,7 @@ public:
 
 int gooo = 1;
 
-#endif /*C_H_*/
+#endif /* C_H_ */
 
 //=
 #ifndef C_H_
@@ -1149,7 +1164,7 @@ public:
 
 	Person myFriend;
 
-	Person(int socSecNo); // contructor
+	Person(int socSecNo); // constructor
 
 	~Person(); // destructor
 
@@ -1175,15 +1190,15 @@ public:
 
 int gooo = 1;
 
-#endif /*C_H_*/
+#endif /* C_H_ */
 
-//!Generate Getters and Setters no Methods Implementation in CPP
+//!Generate Getters and Setters no Methods Separate Definition
 //#org.eclipse.cdt.ui.tests.refactoring.gettersandsetters.GenerateGettersAndSettersTest
 //@.config
 filename=C.h
 getters=id
 setters=id
-infos=1
+definitionSeparate=true
 //@C.h
 #ifndef C_H_
 #define C_H_
@@ -1193,7 +1208,7 @@ private:
 	int /*$*/id/*$$*/;
 };
 
-#endif /*C_H_*/
+#endif /* C_H_ */
 
 //=
 #ifndef C_H_
@@ -1208,24 +1223,24 @@ public:
 	void setId(int id);
 };
 
-int Person::getId() const {
+inline int Person::getId() const {
 	return id;
 }
 
-void Person::setId(int id) {
+inline void Person::setId(int id) {
 	this->id = id;
 }
 
 
-#endif /*C_H_*/
+#endif /* C_H_ */
 
-//!No Methods Implementation in CPP
+//!No Methods Separate Definition
 //#org.eclipse.cdt.ui.tests.refactoring.gettersandsetters.GenerateGettersAndSettersTest
 //@.config
 filename=C.h
 getters=i
 setters=i
-infos=1
+definitionSeparate=true
 //@C.h
 /*
  * test.h
@@ -1262,11 +1277,11 @@ public:
 	void setI(int i);
 };
 
-int test::getI() const {
+inline int test::getI() const {
 	return i;
 }
 
-void test::setI(int i) {
+inline void test::setI(int i) {
 	this->i = i;
 }
 
@@ -1279,6 +1294,7 @@ void test::setI(int i) {
 filename=Test.h
 getters=testField
 setters=testField
+definitionSeparate=true
 
 //@Test.h
 #ifndef TEST_H_
@@ -1346,6 +1362,7 @@ void Test::foo() {
 filename=Test.h
 getters=testField
 setters=testField
+definitionSeparate=true
 
 //@Test.h
 #ifndef TEST_H_
@@ -1386,6 +1403,7 @@ void Test::setTestField(int testField) {
 filename=component_b/public_headers/Test.h
 getters=testField
 setters=testField
+definitionSeparate=true
 
 //@component_b/public_headers/Test.h
 #ifndef TEST_H_
