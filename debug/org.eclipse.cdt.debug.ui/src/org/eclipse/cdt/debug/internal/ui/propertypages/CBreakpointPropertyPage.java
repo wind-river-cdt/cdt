@@ -453,6 +453,7 @@ public class CBreakpointPropertyPage extends FieldEditorPreferencePage implement
 					else if ( property.equals( CBreakpointPreferenceStore.LINE ) ) {
 						// already workspace runnable, setting markers are safe
 						breakpoint.getMarker().setAttribute(IMarker.LINE_NUMBER, getPreferenceStore().getInt(CBreakpointPreferenceStore.LINE));
+						breakpoint.getMarker().setAttribute(ICBreakpoint.ATTR_REQUESTED_LINE, getPreferenceStore().getInt(CBreakpointPreferenceStore.LINE));
 					} else {
 					    // this allow set attributes contributed by other plugins
 						String value = getPropertyAsString(property);

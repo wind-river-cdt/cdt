@@ -92,6 +92,31 @@ public interface ICBreakpoint extends IBreakpoint {
 	public static final String MODULE = "org.eclipse.cdt.debug.core.module"; //$NON-NLS-1$	
 
 	/**
+	 * Breakpoint attribute storing the original requested line for this breakpoint
+	 * This attribute is a <code>int</code>.
+	 * 
+	 * @since 7.2
+	 */
+	public static final String ATTR_REQUESTED_LINE = "requestedLine"; //$NON-NLS-1$
+
+	/**
+	 * Breakpoint attribute storing the file name this breakpoint
+	 * is set in. 
+	 * This attribute is a <code>String</code>.
+	 * 
+	 * @since 7.2
+	 */
+	public static final String ATTR_REQUESTED_FILE = "requestedFile"; //$NON-NLS-1$	
+	
+	/**
+	 * Breakpoint attribute storing the original requested column for this breakpoint
+	 * This attribute is a <code>int</code>.
+	 * 
+	 * @since 7.2
+	 */
+	public static final String ATTR_REQUESTED_COLUMN = "requestedColumn"; //$NON-NLS-1$
+
+	/**
 	 * Returns whether this breakpoint is installed in at least one debug
 	 * target.
 	 * 
@@ -237,4 +262,13 @@ public interface ICBreakpoint extends IBreakpoint {
 	 * @throws CoreException Throws exception in case the extension doesn't exist or cannot be initialized.
 	 */
     public ICBreakpointExtension getExtension(String debugModelId, Class extensionType) throws CoreException ;
+    
+	/**
+	 * Refresh the marker message for the breakpoint.
+	 * 
+	 * @since 7.2
+	 * @throws CoreException if unable to access the property 
+	 * 	on this breakpoint's underlying marker
+	 */
+	public void refreshMessage() throws CoreException;    
 }
