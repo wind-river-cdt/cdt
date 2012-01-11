@@ -12,13 +12,22 @@
 package org.eclipse.cdt.debug.internal.ui.propertypages;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+import org.eclipse.cdt.debug.core.model.ICBreakpoint;
 import org.eclipse.cdt.debug.internal.ui.CBreakpointContext;
+import org.eclipse.cdt.debug.ui.CDebugUIPlugin;
 import org.eclipse.core.resources.IMarker;
+import org.eclipse.core.resources.IWorkspaceRunnable;
+import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.ListenerList;
 import org.eclipse.jface.preference.IPersistentPreferenceStore;
 import org.eclipse.jface.util.IPropertyChangeListener;
@@ -29,15 +38,21 @@ import org.eclipse.jface.util.PropertyChangeEvent;
  */
 public class CBreakpointPreferenceStore implements IPersistentPreferenceStore {
 
-	protected final static String ENABLED = "ENABLED"; //$NON-NLS-1$
+//	protected final static String ENABLED = "ENABLED"; //$NON-NLS-1$
+//
+//	protected final static String CONDITION = "CONDITION"; //$NON-NLS-1$
+//
+//	protected final static String IGNORE_COUNT = "IGNORE_COUNT"; //$NON-NLS-1$
+//
+//	protected final static String LINE = "LINE"; //$NON-NLS-1$
 
-	protected final static String CONDITION = "CONDITION"; //$NON-NLS-1$
-
-	protected final static String IGNORE_COUNT = "IGNORE_COUNT"; //$NON-NLS-1$
-
-	protected final static String LINE = "LINE"; //$NON-NLS-1$
-
+	// This map is the current properties/values being maintained/manipulated
     protected HashMap<String, Object> fProperties = new HashMap<String, Object>();
+    
+    // Original set of values. So we can see what has really changed on the save and
+    // perform appropriate change operations. We only really want to operate on changed
+    // values, to avoid generating churn.
+    protected HashMap<String, Object> fOriginalValues = new HashMap<String, Object>();
     private boolean fIsDirty = false; 
     private ListenerList fListeners;
     private CBreakpointContext fContext;
@@ -56,6 +71,8 @@ public class CBreakpointPreferenceStore implements IPersistentPreferenceStore {
                 try {
                     bpAttrs = marker.getAttributes();
                 } catch (CoreException e) {}
+                fOriginalValues.clear();
+                fOriginalValues.putAll(bpAttrs);
                 fProperties.clear();
                 fProperties.putAll(bpAttrs);
             }
@@ -65,8 +82,68 @@ public class CBreakpointPreferenceStore implements IPersistentPreferenceStore {
     }
     
     public void save() throws IOException {
-        // TODO: save data to breakpoint marker(s)
+    	if ( fIsDirty ) {
+    		final List<String> changedProperties = new ArrayList<String>( 5 );
+    		Set<String> valueNames = fProperties.keySet();
+    		for ( String name : valueNames ) {
+    			if ( fProperties.containsKey( name ) ) {
+    				Object originalObject = fOriginalValues.get( name );
+    				Object currentObject  = fProperties.get( name );
+    				if ( originalObject == null ) {
+    					changedProperties.add( name );
+    				}
+    				else if ( ! originalObject.equals( currentObject ) ) {
+    					changedProperties.add( name );
+    				}
+    			}
+    		}
+    		if ( ! changedProperties.isEmpty() && fContext != null ) {
+    			final ICBreakpoint breakpoint = fContext.getBreakpoint();
+    			IWorkspaceRunnable wr = new IWorkspaceRunnable() {
+
+    				public void run( IProgressMonitor monitor ) throws CoreException {
+    					Iterator<String> changed = changedProperties.iterator();
+    					while( changed.hasNext() ) {
+    						String property = changed.next();
+    						if ( property.equals( ICBreakpoint.ENABLED ) ) {
+    							breakpoint.setEnabled( getBoolean( ICBreakpoint.ENABLED ) );
+    						}
+    						else if ( property.equals( ICBreakpoint.IGNORE_COUNT ) ) {
+    							breakpoint.setIgnoreCount( getInt( ICBreakpoint.IGNORE_COUNT ) );
+    						}
+    						else if ( property.equals( ICBreakpoint.CONDITION ) ) {
+    							breakpoint.setCondition( getString( ICBreakpoint.CONDITION ) );
+    						}
+    						else if ( property.equals( IMarker.LINE_NUMBER ) ) {
+    							// already workspace runnable, setting markers are safe
+    							breakpoint.getMarker().setAttribute(IMarker.LINE_NUMBER, getInt(IMarker.LINE_NUMBER));
+    						} else {
+    						    // this allow set attributes contributed by other plugins
+    							String value = getPropertyAsString(property);
+    							if ( value != null ) {
+    								breakpoint.getMarker().setAttribute(property, value);
+    							}
+    						}
+    					}
+    				}
+    			};
+    			try {
+    				ResourcesPlugin.getWorkspace().run( wr, null );
+    			}
+    			catch( CoreException ce ) {
+    				CDebugUIPlugin.log( ce );
+    			}
+    		}
+    	}
     }
+    
+    private String getPropertyAsString(String property) {
+		if (fProperties.containsKey(property)) {
+			return getString(property);
+		} else {
+			return null;
+		}
+	}
     
     ///////////////////////////////////////////////////////////////////////
     // IPreferenceStore
@@ -99,6 +176,7 @@ public class CBreakpointPreferenceStore implements IPersistentPreferenceStore {
             }
         }
     }
+    
     public boolean getBoolean(String name) {
         boolean retVal = false;
         Object o = fProperties.get(name);
@@ -160,8 +238,7 @@ public class CBreakpointPreferenceStore implements IPersistentPreferenceStore {
         if (oldValue != value) {
             fProperties.put( name, new Boolean(value) );
             setDirty(true);
-            firePropertyChangeEvent(
-                name, new Boolean(oldValue), new Boolean(value) );
+            firePropertyChangeEvent(name, new Boolean(oldValue), new Boolean(value) );
         }
     }
 
@@ -170,8 +247,7 @@ public class CBreakpointPreferenceStore implements IPersistentPreferenceStore {
         if (oldValue != value) {
             fProperties.put( name, new Integer(value) );
             setDirty(true);
-            firePropertyChangeEvent(
-                name, new Integer(oldValue), new Integer(value) );
+            firePropertyChangeEvent(name, new Integer(oldValue), new Integer(value) );
         }
     }
 
