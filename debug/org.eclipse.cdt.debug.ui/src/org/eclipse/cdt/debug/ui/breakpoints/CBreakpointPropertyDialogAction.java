@@ -141,7 +141,7 @@ public class CBreakpointPropertyDialogAction extends SelectionProviderAction {
         PreferenceDialog dialog = createDialog(bpContext);
         
         if (dialog != null) {
-            dialog.setPreferenceStore(createPreferenceStore(bpContext));
+// RNR : delete this            dialog.setPreferenceStore(createPreferenceStore(bpContext));
             dialog.open();
         }
     }
