@@ -13,8 +13,10 @@ package org.eclipse.cdt.debug.internal.core.breakpoints;
 import java.util.Map;
 
 import org.eclipse.cdt.debug.core.CDebugUtils;
+import org.eclipse.cdt.debug.core.model.ICBreakpoint;
 import org.eclipse.cdt.debug.core.model.ICFunctionBreakpoint;
 import org.eclipse.cdt.debug.core.model.ICTracepoint;
+import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
 
@@ -53,6 +55,21 @@ public class CFunctionTracepoint extends AbstractTracepoint implements ICFunctio
 	 * @see org.eclipse.cdt.debug.internal.core.breakpoints.CBreakpoint#getMarkerMessage()
 	 */
 	protected String getMarkerMessage() throws CoreException {
-		return MessageFormat.format( BreakpointMessages.getString( "CFunctionTracepoint.0" ), new String[] { CDebugUtils.getBreakpointText( this, false ) } ); //$NON-NLS-1$
+		return MessageFormat.format( BreakpointMessages.getString( "CFunctionTracepoint.0" ), (Object[])new String[] { CDebugUtils.getBreakpointText( this, false ) } ); //$NON-NLS-1$
 	}
+
+	public int getInstalledLineNumber() throws CoreException {
+		IMarker m = getMarker();
+		if (m != null) {
+			return m.getAttribute(ICBreakpoint.ATTR_REQUESTED_LINE, -1);
+		}
+		return -1;
+	}
+
+	public void setInstalledLineNumber(int lineNum) throws CoreException {
+		IMarker m = getMarker();
+		if (m != null) {
+			m.setAttribute(ICBreakpoint.ATTR_REQUESTED_LINE, lineNum);
+		}		
+	}	
 }

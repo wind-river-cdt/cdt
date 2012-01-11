@@ -267,6 +267,14 @@ public class CDIDebugModel {
 		attributes.put( ICBreakpoint.CONDITION, condition );
 		attributes.put( ICBreakpoint.SOURCE_HANDLE, sourceHandle );
 		attributes.put( ICBreakpointType.TYPE, type );
+		
+		// Added for source relocated breakpoints.
+		if (!attributes.containsKey(ICBreakpoint.ATTR_REQUESTED_FILE)) {
+			attributes.put( ICBreakpoint.ATTR_REQUESTED_FILE, sourceHandle );
+		}
+		if (!attributes.containsKey( ICBreakpoint.ATTR_REQUESTED_LINE )) {
+			attributes.put( ICBreakpoint.ATTR_REQUESTED_LINE, new Integer( lineNumber ));
+		}
 	}
 
 	/**

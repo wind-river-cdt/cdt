@@ -489,7 +489,7 @@ public class CDebugUtils {
 			if (typeString.length() > 0) {
 				label.append(' ');
 				label.append(MessageFormat.format(
-						DebugCoreMessages.getString("CDebugUtils.8"), new String[] { typeString })); //$NON-NLS-1$
+						DebugCoreMessages.getString("CDebugUtils.8"), (Object[])new String[] { typeString })); //$NON-NLS-1$
 			}
 		}
 		return label;
