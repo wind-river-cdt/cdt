@@ -117,6 +117,7 @@ public class CBreakpointPreferenceStore implements IPersistentPreferenceStore {
     						else if ( property.equals( IMarker.LINE_NUMBER ) ) {
     							// already workspace runnable, setting markers are safe
     							breakpoint.getMarker().setAttribute(IMarker.LINE_NUMBER, getInt(IMarker.LINE_NUMBER));
+    							breakpoint.getMarker().setAttribute(ICBreakpoint.ATTR_REQUESTED_LINE, getInt(IMarker.LINE_NUMBER));
     						} else {
     						    // this allow set attributes contributed by other plugins
     							String value = getPropertyAsString(property);
