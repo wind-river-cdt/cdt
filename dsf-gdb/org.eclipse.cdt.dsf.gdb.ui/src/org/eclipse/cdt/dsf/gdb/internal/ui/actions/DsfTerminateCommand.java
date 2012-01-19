@@ -13,11 +13,10 @@ package org.eclipse.cdt.dsf.gdb.internal.ui.actions;
 
 import java.util.concurrent.RejectedExecutionException;
 
-import org.eclipse.cdt.dsf.concurrent.DataRequestMonitor;
 import org.eclipse.cdt.dsf.concurrent.DsfExecutor;
 import org.eclipse.cdt.dsf.concurrent.DsfRunnable;
-import org.eclipse.cdt.dsf.concurrent.ImmediateExecutor;
-import org.eclipse.cdt.dsf.concurrent.RequestMonitor;
+import org.eclipse.cdt.dsf.concurrent.ImmediateDataRequestMonitor;
+import org.eclipse.cdt.dsf.concurrent.ImmediateRequestMonitor;
 import org.eclipse.cdt.dsf.datamodel.DMContexts;
 import org.eclipse.cdt.dsf.debug.service.IProcesses;
 import org.eclipse.cdt.dsf.debug.service.IProcesses.IProcessDMContext;
@@ -43,6 +42,7 @@ public class DsfTerminateCommand implements ITerminateHandler {
     }
 
     // Run control may not be avilable after a connection is terminated and shut down.
+    @Override
     public void canExecute(final IEnabledStateRequest request) {
         if (request.getElements().length != 1 || 
             !(request.getElements()[0] instanceof IDMVMContext) ) 
@@ -65,6 +65,7 @@ public class DsfTerminateCommand implements ITerminateHandler {
         try {
             fExecutor.execute(
                 new DsfRunnable() { 
+                    @Override
                     public void run() {
                         // Get the processes service and the exec context.
                     	IProcesses procService = fTracker.getService(IProcesses.class);
@@ -73,7 +74,7 @@ public class DsfTerminateCommand implements ITerminateHandler {
                             request.setEnabled(false);
                             request.done();
                         } else {
-                        	procService.canTerminate(processDmc, new DataRequestMonitor<Boolean>(ImmediateExecutor.getInstance(), null) {
+                        	procService.canTerminate(processDmc, new ImmediateDataRequestMonitor<Boolean>() {
                         		@Override
                         		protected void handleCompleted() {
                         			request.setEnabled(isSuccess() && getData());
@@ -89,6 +90,7 @@ public class DsfTerminateCommand implements ITerminateHandler {
         }
     }
 
+    @Override
     public boolean execute(final IDebugCommandRequest request) {
         if (request.getElements().length != 1 || 
         	!(request.getElements()[0] instanceof IDMVMContext)) {
@@ -107,10 +109,11 @@ public class DsfTerminateCommand implements ITerminateHandler {
 
         try {
             fExecutor.execute(new DsfRunnable() { 
+                @Override
                 public void run() {
                 	IProcesses procService = fTracker.getService(IProcesses.class);
                     if (procService != null) {
-                    	procService.terminate(processDmc, new RequestMonitor(ImmediateExecutor.getInstance(), null) {
+                    	procService.terminate(processDmc, new ImmediateRequestMonitor() {
                             @Override
                             protected void handleCompleted() {
                                 request.setStatus(getStatus());

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2005, 2011 IBM Corporation and others.
+ * Copyright (c) 2005, 2012 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -3274,8 +3274,7 @@ public class AST2TemplateTests extends AST2BaseTest {
 	public void testBug238180_ClassCast() throws Exception {
 		// the code above used to trigger a ClassCastException
 		BindingAssertionHelper ba= new BindingAssertionHelper(getAboveComment(), true);
-		String tmplId= "str<true, true, false, A, B>";
-		ICPPClassType p= ba.assertNonProblem(tmplId, tmplId.length(), ICPPClassType.class);
+		ICPPClassType p= ba.assertNonProblem("str<true, true, false, A, B>", 0, ICPPClassType.class);
 		ICPPConstructor con= p.getConstructors()[1];
 		ICPPReferenceType reftype= (ICPPReferenceType) con.getType().getParameterTypes()[0];
 		IQualifierType qt= (IQualifierType) reftype.getType();
@@ -4197,7 +4196,7 @@ public class AST2TemplateTests extends AST2BaseTest {
 	//	void test(A<int> x) {
 	//	  f(x);
 	//	}
-	public void _testInlineFriendFunction_284690_2() throws Exception {
+	public void testInlineFriendFunction_287409() throws Exception {
 		final String code = getAboveComment();
 		BindingAssertionHelper bh= new BindingAssertionHelper(code, true);
     	ICPPFunction func= bh.assertNonProblem("f(x)", 1, ICPPFunction.class);
@@ -5636,6 +5635,169 @@ public class AST2TemplateTests extends AST2BaseTest {
 	//		delete C< A<B>::b >::ptr;
 	//	}
 	public void testTemplateAmbiguityInDeleteExpression_364225() throws Exception {
+		parseAndCheckBindings();
+	}
+	
+	//	template <typename T> void foo(T);
+	//	template <typename T> void foo(T, typename T::type* = 0);
+	//	int main() {
+	//		foo(0);
+	//	}
+	public void testSyntaxFailureInstantiatingFunctionTemplate_365981a() throws Exception {
+		parseAndCheckBindings();
+	}
+	
+	//	template <typename T> bool bar(T);
+	//	template <typename T> bool bar(T, void(T::*)() = 0);
+	//	void test() {
+	//	    bar(0);  
+	//	}
+	public void testSyntaxFailureInstantiatingFunctionTemplate_365981b() throws Exception {
+		parseAndCheckBindings();
+	}
+
+	//	template<typename _Tp> class vector {};
+	//	template<typename T> struct bar {
+	//	    void foo() {
+	//	        vector<T> index;
+	//	        for (const auto& entry : index) {
+	//	        }
+	//	    }
+	//	};
+	public void testResolvingAutoTypeWithDependentExpression_367472() throws Exception {
+		parseAndCheckBindings();
+	}
+	
+	//	void foo(int, int);
+	//	template <typename... Args> void bar(Args... args) {
+	//	    foo(1,2,args...);
+	//	    foo(args...);
+	//	}
+	public void testPackExpansionsAsArguments_367560() throws Exception {
+		parseAndCheckBindings();
+	}
+	
+	//	template <typename> class A;
+	//	template <typename T> class A<void (T::*)()> {};
+	//	template <typename T> class A<void (T::*)() const> {};
+	//
+	//	struct S {};
+	//	int main()  {
+	//	    A<void (S::*)()> m;
+	//	}
+	public void testDeductionForConstFunctionType_367562() throws Exception {
+		parseAndCheckBindings();
+	}
+	
+	//	template <typename> struct base {
+	//	    typedef int type;
+	//	};
+	//	template <typename A, typename B> struct derived;
+	//	template <typename B> struct derived<int, B> : public base<B> {
+	//	    typedef typename derived::type type;  // ERROR HERE
+	//	};
+	public void testTemplateShortNameInQualifiedName_367607() throws Exception {
+		parseAndCheckBindings();
+		BindingAssertionHelper bh= new BindingAssertionHelper(getAboveComment(), true);
+		ICPPDeferredClassInstance shortHand= bh.assertNonProblem("derived:", -1);
+		assertTrue(shortHand.getClassTemplate() instanceof ICPPClassTemplatePartialSpecialization);
+	}
+	
+	//	template <typename> class A {};
+	//	template <typename T, typename=void> struct B {};
+	//	template <typename T> struct B<A<T> > {
+	//	    typedef int type;
+	//	};
+	//	typedef B<A<int> >::type type;  // ERROR HERE
+	public void testPartialClassTemplateSpecUsingDefaultArgument_367997() throws Exception {
+		parseAndCheckBindings();
+	}
+	
+	//	struct two { char x[2]; };
+	//	two check(...);
+	//	char check(int);
+	//	template <int> struct foo {};
+	//	template <> struct foo<1> { typedef int type; };
+	//	typedef foo<sizeof(check(0))>::type t;  // ERROR HERE
+	public void testValueForSizeofExpression_368309() throws Exception {
+		parseAndCheckBindings();
+	}
+	
+	//	template <class Value> struct iterator {
+	//	    Value operator*();
+	//	};
+	//	template <typename Iterator> struct range {
+	//	    Iterator begin();
+	//	};
+	//	template <typename T> struct A {
+	//	    struct iterator_t : public iterator<T> {};
+	//	    typedef range<iterator_t> range_t;
+	//	};
+	//	struct S {
+	//	    int x;
+	//	};
+	//
+	//	void test() {
+	//	    A<S>::range_t r;
+	//	    auto cur = r.begin(); // A<S>::iterator_t
+	//	    A<S>::iterator_t cur;
+	//	    auto e = *cur;
+	//	    e.x;            // ERROR HERE: "Field 'x' could not be resolved"
+	//	}
+	public void testAutoTypeWithTypedef_368311() throws Exception {
+		BindingAssertionHelper bh= new BindingAssertionHelper(getAboveComment(), true);
+		IVariable v= bh.assertNonProblem("cur = r.begin()", 3);
+		assertEquals("A<S>::iterator_t", ASTTypeUtil.getType(v.getType(), true));
+		parseAndCheckBindings();
+	}
+	
+	//	struct S {
+	//	    int x;
+	//	};
+	//	template <typename> struct iterator_base {
+	//	    S operator*();
+	//	};
+	//	template <typename> struct A {
+	//	    struct iterator : public iterator_base<iterator> {};
+	//	};
+	//	void test() {
+	//	    A<int>::iterator it;
+	//	    auto s = *it;
+	//	    s.x;  // ERROR HERE: "Field 'x' could not be resolved"
+	//	}
+	public void testSpecializationOfClassType_368610a() throws Exception {
+		parseAndCheckBindings();
+	}
+	
+	//	struct S {
+	//	    int x;
+	//	};
+	//	template <typename> struct iterator_base {
+	//	    S operator*();
+	//	};
+	//	template <typename> struct A {
+	//	    template<typename T> struct iterator : public iterator_base<iterator> {};
+	//	};
+	//	void test() {
+	//	    A<int>::iterator<int> it;
+	//	    auto s = *it;
+	//	    s.x;  // ERROR HERE: "Field 'x' could not be resolved"
+	//	}
+	public void testSpecializationOfClassType_368610b() throws Exception {
+		parseAndCheckBindings();
+	}
+	
+	//	template <template<typename T> class TT> struct  CTT {
+	//		int y;
+	//	};
+	//	template <typename T> struct CT {
+	//		CTT<CT> someFunc();
+	//	};
+	//	void test2() {
+	//		CT<int> x;
+	//		x.someFunc().y;
+	//	}
+	public void testSpecializationOfClassType_368610c() throws Exception {
 		parseAndCheckBindings();
 	}
 }

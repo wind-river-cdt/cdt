@@ -50,6 +50,7 @@ public class CFunctionBreakpoint extends AbstractLineBreakpoint implements ICFun
 	/*(non-Javadoc)
 	 * @see org.eclipse.cdt.debug.internal.core.breakpoints.CBreakpoint#getMarkerMessage()
 	 */
+	@Override
 	protected String getMarkerMessage() throws CoreException {
 		return MessageFormat.format( BreakpointMessages.getString( "CFunctionBreakpoint.0" ), (Object[])new String[] { CDebugUtils.getBreakpointText( this, false ) } ); //$NON-NLS-1$
 	}

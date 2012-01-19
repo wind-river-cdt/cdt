@@ -50,6 +50,7 @@ public class CLineBreakpoint extends AbstractLineBreakpoint {
 	/*(non-Javadoc)
 	 * @see org.eclipse.cdt.debug.internal.core.breakpoints.CBreakpoint#getMarkerMessage()
 	 */
+	@Override
 	protected String getMarkerMessage() throws CoreException {
 		IMarker marker = this.getMarker();
 		int bp_line = 0;

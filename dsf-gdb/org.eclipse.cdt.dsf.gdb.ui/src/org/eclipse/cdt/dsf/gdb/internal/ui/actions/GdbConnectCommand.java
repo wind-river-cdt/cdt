@@ -24,7 +24,7 @@ import org.eclipse.cdt.dsf.concurrent.DataRequestMonitor;
 import org.eclipse.cdt.dsf.concurrent.DsfExecutor;
 import org.eclipse.cdt.dsf.concurrent.DsfRunnable;
 import org.eclipse.cdt.dsf.concurrent.IDsfStatusConstants;
-import org.eclipse.cdt.dsf.concurrent.ImmediateExecutor;
+import org.eclipse.cdt.dsf.concurrent.ImmediateDataRequestMonitor;
 import org.eclipse.cdt.dsf.concurrent.Query;
 import org.eclipse.cdt.dsf.concurrent.RequestMonitor;
 import org.eclipse.cdt.dsf.datamodel.IDMContext;
@@ -84,6 +84,7 @@ public class GdbConnectCommand implements IConnect {
         fTracker.dispose();
     }
 
+    @Override
     public boolean canConnect() {
        	Query<Boolean> canConnectQuery = new Query<Boolean>() {
             @Override
@@ -210,6 +211,7 @@ public class GdbConnectCommand implements IConnect {
 
     			final String finalBinaryPath = binaryPath;
     			fExecutor.execute(new DsfRunnable() {
+                    @Override
     				public void run() {
     					IGDBProcesses procService = fTracker.getService(IGDBProcesses.class);
     					ICommandControlService commandControl = fTracker.getService(ICommandControlService.class);
@@ -239,6 +241,7 @@ public class GdbConnectCommand implements IConnect {
     	}
     }
 
+    @Override
     public void connect(RequestMonitor requestMonitor)
     {
     	// Create a fake rm to avoid null pointer exceptions
@@ -255,6 +258,7 @@ public class GdbConnectCommand implements IConnect {
     	// thread to prompt the user for the process to choose.
     	// This is why we simply use a DsfRunnable.
     	fExecutor.execute(new DsfRunnable() {
+            @Override
     		public void run() {
     			final IProcesses procService = fTracker.getService(IProcesses.class);
     			ICommandControlService commandControl = fTracker.getService(ICommandControlService.class);
@@ -400,11 +404,11 @@ public class GdbConnectCommand implements IConnect {
     		// We need to create a new list so that we can remove elements from it.
     		final List<IProcessExtendedInfo> procList = new ArrayList<IProcessExtendedInfo>(Arrays.asList(processes));
 
-    		class AttachToProcessRequestMonitor extends DataRequestMonitor<IDMContext> {
+    		class AttachToProcessRequestMonitor extends ImmediateDataRequestMonitor<IDMContext> {
     			public AttachToProcessRequestMonitor() {
-    				super(ImmediateExecutor.getInstance(), null);
+    				super();
     			}
-
+    			
     			@Override
     			protected void handleCompleted() {
     				if (!isSuccess()) {
@@ -417,7 +421,7 @@ public class GdbConnectCommand implements IConnect {
     					// Check that we can actually attach to the process.
     					// This is because some backends may not support multi-process.
     					// If the backend does not support multi-process, we only attach to the first process.
-    					procService.isDebuggerAttachSupported(controlDmc, new DataRequestMonitor<Boolean>(ImmediateExecutor.getInstance(), null) {
+    					procService.isDebuggerAttachSupported(controlDmc, new ImmediateDataRequestMonitor<Boolean>() {
     						@Override
     						protected void handleCompleted() {
     							if (isSuccess() && getData()) {

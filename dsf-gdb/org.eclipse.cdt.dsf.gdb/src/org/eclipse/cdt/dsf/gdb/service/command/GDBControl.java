@@ -30,6 +30,7 @@ import org.eclipse.cdt.dsf.concurrent.DataRequestMonitor;
 import org.eclipse.cdt.dsf.concurrent.DsfRunnable;
 import org.eclipse.cdt.dsf.concurrent.IDsfStatusConstants;
 import org.eclipse.cdt.dsf.concurrent.ImmediateExecutor;
+import org.eclipse.cdt.dsf.concurrent.ImmediateRequestMonitor;
 import org.eclipse.cdt.dsf.concurrent.RequestMonitor;
 import org.eclipse.cdt.dsf.concurrent.RequestMonitorWithProgress;
 import org.eclipse.cdt.dsf.concurrent.Sequence;
@@ -43,10 +44,10 @@ import org.eclipse.cdt.dsf.gdb.service.IGDBBackend;
 import org.eclipse.cdt.dsf.gdb.service.IGDBProcesses;
 import org.eclipse.cdt.dsf.mi.service.IMIBackend;
 import org.eclipse.cdt.dsf.mi.service.IMIBackend.BackendStateChangedEvent;
-import org.eclipse.cdt.dsf.mi.service.MIProcesses.ContainerExitedDMEvent;
 import org.eclipse.cdt.dsf.mi.service.IMICommandControl;
 import org.eclipse.cdt.dsf.mi.service.IMIRunControl;
 import org.eclipse.cdt.dsf.mi.service.MIProcesses;
+import org.eclipse.cdt.dsf.mi.service.MIProcesses.ContainerExitedDMEvent;
 import org.eclipse.cdt.dsf.mi.service.command.AbstractCLIProcess;
 import org.eclipse.cdt.dsf.mi.service.command.AbstractMIControl;
 import org.eclipse.cdt.dsf.mi.service.command.CLIEventProcessor;
@@ -119,7 +120,7 @@ public class GDBControl extends AbstractMIControl implements IGDBControl {
     
     @Override
     public void initialize(final RequestMonitor requestMonitor) {
-        super.initialize( new RequestMonitor(ImmediateExecutor.getInstance(), requestMonitor) {
+        super.initialize( new ImmediateRequestMonitor(requestMonitor) {
             @Override
             protected void handleSuccess() {
                 doInitialize(requestMonitor);
@@ -168,6 +169,7 @@ public class GDBControl extends AbstractMIControl implements IGDBControl {
         
     }        
 
+	@Override
     public String getId() {
         return fMIBackend.getId();
     }
@@ -177,10 +179,12 @@ public class GDBControl extends AbstractMIControl implements IGDBControl {
         return fControlDmc;
     }
     
+	@Override
     public ICommandControlDMContext getContext() {
         return fControlDmc;
     }
     
+	@Override
     public void terminate(final RequestMonitor rm) {
         if (fTerminated) {
             rm.done();
@@ -202,6 +206,7 @@ public class GDBControl extends AbstractMIControl implements IGDBControl {
         // runnable will kill the task.
         final Future<?> forceQuitTask = getExecutor().schedule(
             new DsfRunnable() {
+            	@Override
                 public void run() {
                     fMIBackend.destroy();
                     rm.done();
@@ -232,6 +237,7 @@ public class GDBControl extends AbstractMIControl implements IGDBControl {
         );
     }
 
+	@Override
     public AbstractCLIProcess getCLIProcess() { 
         return fCLIProcess; 
     }
@@ -239,11 +245,13 @@ public class GDBControl extends AbstractMIControl implements IGDBControl {
 	/**
 	 * @since 2.0
 	 */
+	@Override
 	public void setTracingStream(OutputStream tracingStream) {
 		setMITracingStream(tracingStream);
 	}
 	
 	/** @since 3.0 */
+	@Override
 	public void setEnvironment(Properties props, boolean clear, final RequestMonitor rm) {
 		int count = 0;
 		CountingRequestMonitor countingRm = new CountingRequestMonitor(getExecutor(), rm);
@@ -272,6 +280,7 @@ public class GDBControl extends AbstractMIControl implements IGDBControl {
 	 * @since 4.0
 	 */
 	@SuppressWarnings("unchecked")
+	@Override
 	public void completeInitialization(final RequestMonitor rm) {
 		// We take the attributes from the launchConfiguration
 		ILaunch launch = (ILaunch)getSession().getModelAdapter(ILaunch.class);
@@ -440,7 +449,9 @@ public class GDBControl extends AbstractMIControl implements IGDBControl {
      * return empty list.
      */
 	private final List<String> fFeatures = new ArrayList<String>();
+
 	/** @since 4.0 */
+	@Override
 	public List<String> getFeatures() {
 		return fFeatures;
 	}
@@ -448,6 +459,7 @@ public class GDBControl extends AbstractMIControl implements IGDBControl {
 	/**
 	 * @since 4.0
 	 */
+	@Override
 	public void enablePrettyPrintingForMIVariableObjects(RequestMonitor rm) {
 		rm.done();
 	}
@@ -455,6 +467,7 @@ public class GDBControl extends AbstractMIControl implements IGDBControl {
 	/**
 	 * @since 4.0
 	 */
+	@Override
 	public void setPrintPythonErrors(boolean enabled, RequestMonitor rm) {
 		rm.done();
 	}

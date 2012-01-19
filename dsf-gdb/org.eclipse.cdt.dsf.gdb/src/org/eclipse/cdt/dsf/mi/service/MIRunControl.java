@@ -20,6 +20,7 @@ import org.eclipse.cdt.core.IAddress;
 import org.eclipse.cdt.dsf.concurrent.DataRequestMonitor;
 import org.eclipse.cdt.dsf.concurrent.IDsfStatusConstants;
 import org.eclipse.cdt.dsf.concurrent.ImmediateExecutor;
+import org.eclipse.cdt.dsf.concurrent.ImmediateRequestMonitor;
 import org.eclipse.cdt.dsf.concurrent.Immutable;
 import org.eclipse.cdt.dsf.concurrent.MultiRequestMonitor;
 import org.eclipse.cdt.dsf.concurrent.RequestMonitor;
@@ -119,6 +120,7 @@ public class MIRunControl extends AbstractDsfService implements IMIRunControl, I
 		 * Returns the GDB/MI thread identifier of this context.
 		 * @return
 		 */
+		@Override
 		public int getThreadId(){
 			return fThreadId;
 		}
@@ -143,7 +145,9 @@ public class MIRunControl extends AbstractDsfService implements IMIRunControl, I
 			fReason = reason;
 			fDetails = details;
 		}
+		@Override
 		public StateChangeReason getStateChangeReason() { return fReason; }
+		@Override
 		public String getDetails() { return fDetails; }
 	}
 
@@ -166,6 +170,7 @@ public class MIRunControl extends AbstractDsfService implements IMIRunControl, I
 			fMIInfo = miInfo;
 		}
 
+		@Override
 		public T getMIEvent() { return fMIInfo; }
 	}
 
@@ -180,6 +185,7 @@ public class MIRunControl extends AbstractDsfService implements IMIRunControl, I
 			super(ctx, miInfo);
 		}
 
+		@Override
 		public StateChangeReason getReason() {
 			if (getMIEvent() instanceof MICatchpointHitEvent) {	// must precede MIBreakpointHitEvent
 				return StateChangeReason.EVENT_BREAKPOINT;
@@ -243,6 +249,7 @@ public class MIRunControl extends AbstractDsfService implements IMIRunControl, I
             fBreakpoints = new IBreakpointDMContext[] { bpCtx };
         }
         
+    	@Override
         public IBreakpointDMContext[] getBreakpoints() {
             return fBreakpoints;
         }
@@ -260,6 +267,7 @@ public class MIRunControl extends AbstractDsfService implements IMIRunControl, I
 			? new IExecutionDMContext[] { triggeringDmc } : new IExecutionDMContext[0];
 		}
 
+		@Override
 		public IExecutionDMContext[] getTriggeringContexts() {
 			return triggeringDmcs;
 		}
@@ -281,6 +289,7 @@ public class MIRunControl extends AbstractDsfService implements IMIRunControl, I
             fBreakpoints = new IBreakpointDMContext[] { bpCtx };
         }
         
+    	@Override
         public IBreakpointDMContext[] getBreakpoints() {
             return fBreakpoints;
         }
@@ -294,6 +303,7 @@ public class MIRunControl extends AbstractDsfService implements IMIRunControl, I
 			super(ctx, miInfo);
 		}
 
+		@Override
 		public StateChangeReason getReason() {
 			switch(getMIEvent().getType()) {
 			case MIRunningEvent.CONTINUE:
@@ -326,6 +336,7 @@ public class MIRunControl extends AbstractDsfService implements IMIRunControl, I
 			? new IExecutionDMContext[] { triggeringDmc } : new IExecutionDMContext[0];
 		}
 
+		@Override
 		public IExecutionDMContext[] getTriggeringContexts() {
 			return triggeringDmcs;
 		}
@@ -397,7 +408,7 @@ public class MIRunControl extends AbstractDsfService implements IMIRunControl, I
     @Override
     public void initialize(final RequestMonitor rm) {
         super.initialize(
-            new RequestMonitor(ImmediateExecutor.getInstance(), rm) {
+            new ImmediateRequestMonitor(rm) {
                 @Override
                 protected void handleSuccess() {
                     doInitialize(rm);
@@ -654,6 +665,7 @@ public class MIRunControl extends AbstractDsfService implements IMIRunControl, I
     
     ///////////////////////////////////////////////////////////////////////////
     // IRunControl
+	@Override
 	public void canResume(IExecutionDMContext context, DataRequestMonitor<Boolean> rm) {
         rm.setData(doCanResume(context));
         rm.done();
@@ -664,6 +676,7 @@ public class MIRunControl extends AbstractDsfService implements IMIRunControl, I
 	    return !fTerminated && isSuspended(context) && !fResumePending;
 	}
 
+	@Override
 	public void canSuspend(IExecutionDMContext context, DataRequestMonitor<Boolean> rm) {
         rm.setData(doCanSuspend(context));
         rm.done();
@@ -673,14 +686,17 @@ public class MIRunControl extends AbstractDsfService implements IMIRunControl, I
         return !fTerminated && !isSuspended(context);
     }
 
+	@Override
 	public boolean isSuspended(IExecutionDMContext context) {
 		return !fTerminated && fSuspended;
 	}
 
+	@Override
 	public boolean isStepping(IExecutionDMContext context) {
     	return !fTerminated && fStepping;
     }
 
+	@Override
 	public void resume(final IExecutionDMContext context, final RequestMonitor rm) {
 		assert context != null;
 
@@ -722,6 +738,7 @@ public class MIRunControl extends AbstractDsfService implements IMIRunControl, I
         }
 	}
 	
+	@Override
 	public void suspend(IExecutionDMContext context, final RequestMonitor rm){
 		assert context != null;
 
@@ -746,6 +763,7 @@ public class MIRunControl extends AbstractDsfService implements IMIRunControl, I
         }
     }
     
+	@Override
     public void canStep(IExecutionDMContext context, StepType stepType, DataRequestMonitor<Boolean> rm) {
     	if (context instanceof IContainerDMContext) {
     		rm.setData(false);
@@ -755,6 +773,7 @@ public class MIRunControl extends AbstractDsfService implements IMIRunControl, I
         canResume(context, rm);
     }
     
+	@Override
     public void step(final IExecutionDMContext context, StepType stepType, final RequestMonitor rm) {
     	assert context != null;
 
@@ -825,6 +844,7 @@ public class MIRunControl extends AbstractDsfService implements IMIRunControl, I
 
     }
 
+	@Override
     public void getExecutionContexts(final IContainerDMContext containerDmc, final DataRequestMonitor<IExecutionDMContext[]> rm) {
 		fMICommandCache.execute(
 				fCommandFactory.createMIThreadListIds(containerDmc),
@@ -855,6 +875,7 @@ public class MIRunControl extends AbstractDsfService implements IMIRunControl, I
 		}
 	}
 	
+	@Override
 	public void getExecutionData(IExecutionDMContext dmc, DataRequestMonitor<IExecutionDMData> rm){
         if (dmc instanceof IContainerDMContext) {
             rm.setData( new ExecutionData(fStateChangeReason, fStateChangeDetails) );
@@ -1093,7 +1114,7 @@ public class MIRunControl extends AbstractDsfService implements IMIRunControl, I
 		
 		// This RM propagates any error to the original rm of the actual steps.
 		// Even in case of errors for these steps, we want to continue the overall sequence
-		RequestMonitor stepsRm = new RequestMonitor(ImmediateExecutor.getInstance(), null) {
+		RequestMonitor stepsRm = new ImmediateRequestMonitor() {
 			@Override
 			protected void handleCompleted() {
 				info.rm.setStatus(getStatus());
@@ -1122,6 +1143,7 @@ public class MIRunControl extends AbstractDsfService implements IMIRunControl, I
 	/**
 	 * @since 3.0
 	 */
+	@Override
 	public void executeWithTargetAvailable(IDMContext ctx, final Sequence.Step[] steps, final RequestMonitor rm) {
 		if (!fOngoingOperation) {
 			// We are the first operation of this kind currently requested
@@ -1361,6 +1383,7 @@ public class MIRunControl extends AbstractDsfService implements IMIRunControl, I
 	 * {@inheritDoc}
      * @since 1.1
      */
+		@Override
 	public void flushCache(IDMContext context) {
 		fMICommandCache.reset(context);		
 	}
@@ -1396,6 +1419,7 @@ public class MIRunControl extends AbstractDsfService implements IMIRunControl, I
 	/**
 	 * @since 3.0
 	 */
+	@Override
 	public void canRunToLine(IExecutionDMContext context, String sourceFile,
 			int lineNumber, DataRequestMonitor<Boolean> rm) {
 		canResume(context, rm);
@@ -1407,6 +1431,7 @@ public class MIRunControl extends AbstractDsfService implements IMIRunControl, I
 	/**
 	 * @since 3.0
 	 */
+	@Override
 	public void runToLine(IExecutionDMContext context, String sourceFile,
 			int lineNumber, boolean skipBreakpoints, RequestMonitor rm) {
 		
@@ -1422,6 +1447,7 @@ public class MIRunControl extends AbstractDsfService implements IMIRunControl, I
 	/**
 	 * @since 3.0
 	 */
+	@Override
 	public void canRunToAddress(IExecutionDMContext context, IAddress address,
 			DataRequestMonitor<Boolean> rm) {
 		canResume(context, rm);
@@ -1433,6 +1459,7 @@ public class MIRunControl extends AbstractDsfService implements IMIRunControl, I
 	/**
 	 * @since 3.0
 	 */
+	@Override
 	public void runToAddress(IExecutionDMContext context, IAddress address,
 			boolean skipBreakpoints, RequestMonitor rm) {
 		runToLocation(context, "*0x" + address.toString(16), skipBreakpoints, rm); //$NON-NLS-1$
@@ -1444,6 +1471,7 @@ public class MIRunControl extends AbstractDsfService implements IMIRunControl, I
 	/**
 	 * @since 3.0
 	 */
+	@Override
 	public void canMoveToLine(IExecutionDMContext context, String sourceFile,
 			int lineNumber, boolean resume, DataRequestMonitor<Boolean> rm) {
 		canResume(context, rm);
@@ -1455,6 +1483,7 @@ public class MIRunControl extends AbstractDsfService implements IMIRunControl, I
 	/**
 	 * @since 3.0
 	 */
+	@Override
 	public void moveToLine(IExecutionDMContext context, String sourceFile,
 			int lineNumber, boolean resume, RequestMonitor rm) {
 		IMIExecutionDMContext threadExecDmc = DMContexts.getAncestorOfType(context, IMIExecutionDMContext.class);
@@ -1488,6 +1517,7 @@ public class MIRunControl extends AbstractDsfService implements IMIRunControl, I
 	/**
 	 * @since 3.0
 	 */
+	@Override
 	public void canMoveToAddress(IExecutionDMContext context, IAddress address,
 			boolean resume, DataRequestMonitor<Boolean> rm) {
 		canResume(context, rm);
@@ -1499,6 +1529,7 @@ public class MIRunControl extends AbstractDsfService implements IMIRunControl, I
 	/**
 	 * @since 3.0
 	 */
+	@Override
 	public void moveToAddress(IExecutionDMContext context, IAddress address,
 			boolean resume, RequestMonitor rm) {
 		IMIExecutionDMContext threadExecDmc = DMContexts.getAncestorOfType(context, IMIExecutionDMContext.class);
@@ -1526,11 +1557,13 @@ public class MIRunControl extends AbstractDsfService implements IMIRunControl, I
 	}
 
 	/** @since 4.0 */
+	@Override
 	public IRunMode getRunMode() {
 		return MIRunMode.ALL_STOP;
 	}
 	
 	/** @since 4.0 */
+	@Override
 	public boolean isTargetAcceptingCommands() {
 		// For all-stop mode:
 		// 1- if GDB is not terminated and

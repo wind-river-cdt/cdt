@@ -18,9 +18,8 @@ import java.util.concurrent.TimeoutException;
 
 import org.eclipse.cdt.debug.core.ICDTLaunchConfigurationConstants;
 import org.eclipse.cdt.dsf.concurrent.DataRequestMonitor;
-import org.eclipse.cdt.dsf.concurrent.ImmediateExecutor;
+import org.eclipse.cdt.dsf.concurrent.ImmediateRequestMonitor;
 import org.eclipse.cdt.dsf.concurrent.Query;
-import org.eclipse.cdt.dsf.concurrent.RequestMonitor;
 import org.eclipse.cdt.dsf.datamodel.DMContexts;
 import org.eclipse.cdt.dsf.debug.service.IProcesses.IProcessDMContext;
 import org.eclipse.cdt.dsf.debug.service.IRunControl.IExitedDMEvent;
@@ -76,7 +75,8 @@ public class OperationsWhileTargetIsRunningTest extends BaseTestCase {
 		final DsfSession session = getGDBLaunch().getSession();
 		
         Runnable runnable = new Runnable() {
-            public void run() {
+            @Override
+			public void run() {
             	fServicesTracker = 
             			new DsfServicesTracker(TestsPlugin.getBundleContext(), 
             					session.getId());
@@ -170,9 +170,10 @@ public class OperationsWhileTargetIsRunningTest extends BaseTestCase {
         // Don't use a query here.  The terminate, because it kills GDB, may not return right away
         // But that is ok because we wait for a shutdown event right after
         Runnable runnable = new Runnable() {
-            public void run() {
+            @Override
+			public void run() {
     	        IProcessDMContext processDmc = DMContexts.getAncestorOfType(fContainerDmc, IProcessDMContext.class);
-    	    	fProcesses.terminate(processDmc, new RequestMonitor(ImmediateExecutor.getInstance(), null));
+    	    	fProcesses.terminate(processDmc, new ImmediateRequestMonitor());
             }
         };
         fProcesses.getExecutor().execute(runnable);
@@ -259,8 +260,9 @@ public class OperationsWhileTargetIsRunningTest extends BaseTestCase {
         // Don't use a query here.  Because GDB will be killed, the call to detach may not return right away
         // But that is ok because we wait for a shutdown event right after
         Runnable runnable = new Runnable() {
-            public void run() {
-    	    	fProcesses.detachDebuggerFromProcess(fContainerDmc, new RequestMonitor(ImmediateExecutor.getInstance(), null));
+            @Override
+			public void run() {
+    	    	fProcesses.detachDebuggerFromProcess(fContainerDmc, new ImmediateRequestMonitor());
             }
         };
         fProcesses.getExecutor().execute(runnable);

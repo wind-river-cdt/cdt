@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2004, 2011 IBM Corporation and others.
+ * Copyright (c) 2004, 2012 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -324,12 +324,14 @@ public class CPPSemantics {
 		if (binding instanceof ICPPClassTemplate && !(binding instanceof ICPPClassSpecialization) &&
 				!(binding instanceof ICPPTemplateParameter) && !(data.astName instanceof ICPPASTTemplateId)) {
 			ASTNodeProperty prop = data.astName.getPropertyInParent();
-			if (prop != ICPPASTTemplateId.TEMPLATE_NAME && prop != ICPPASTQualifiedName.SEGMENT_NAME) {
+			if (prop != ICPPASTTemplateId.TEMPLATE_NAME && !data.astName.isQualified()) {
 				// You cannot use a class template name outside of the class template scope,
 				// mark it as a problem.
-				IBinding replacement= CPPTemplates.isUsedInClassTemplateScope((ICPPClassTemplate) binding, data.astName);
-				if (replacement != null) {
-					binding= replacement;
+				IBinding user= CPPTemplates.isUsedInClassTemplateScope((ICPPClassTemplate) binding, data.astName);
+				if (user instanceof ICPPClassTemplate) {
+					binding= ((ICPPClassTemplate) user).asDeferredInstance();
+				} else if (user != null) {
+					binding= user;
 				} else {
 					boolean ok= false;
 					IASTNode node= data.astName.getParent();
@@ -362,10 +364,12 @@ public class CPPSemantics {
 			// try to replace binding by the one pointing to the enclosing template declaration.
 			ICPPDeferredClassInstance dcl= (ICPPDeferredClassInstance) binding;
 			IBinding usedHere= CPPTemplates.isUsedInClassTemplateScope(dcl.getClassTemplate(), data.astName);
-			if (usedHere instanceof ICPPDeferredClassInstance) {
-				ICPPDeferredClassInstance alt= (ICPPDeferredClassInstance) usedHere;
-				if (CPPTemplates.areSameArguments(alt.getTemplateArguments(), dcl.getTemplateArguments())) {
-					binding= alt;
+			if (usedHere instanceof ICPPClassTemplatePartialSpecialization) {
+				if (CPPTemplates.areSameArguments(((ICPPClassTemplatePartialSpecialization) usedHere).getTemplateArguments(), dcl.getTemplateArguments()))
+					binding= ((ICPPClassTemplatePartialSpecialization) usedHere).asDeferredInstance();
+			} else if (usedHere instanceof ICPPClassTemplate) {
+				if (CPPTemplates.areSameArguments(CPPTemplates.templateParametersAsArguments(((ICPPClassTemplate) usedHere).getTemplateParameters()), dcl.getTemplateArguments())) {
+					binding= ((ICPPClassTemplate) usedHere).asDeferredInstance();
 				}
 			}
 		}
@@ -534,12 +538,14 @@ public class CPPSemantics {
 	private static void doKoenigLookup(LookupData data) throws DOMException {
 		data.ignoreUsingDirectives = true;
 		data.forceQualified = true;
-		Set<ICPPNamespaceScope> associated = getAssociatedScopes(data);
+        Set<ICPPFunction> friendFns = new HashSet<ICPPFunction>(2);
+		Set<ICPPNamespaceScope> associated = getAssociatedScopes(data, friendFns);
 		for (ICPPNamespaceScope scope : associated) {
 			if (!data.visited.containsKey(scope)) {
 				lookup(data, scope);
 			}
 		}
+		mergeResults(data, friendFns.toArray(), false);
 	}
        
 	static IBinding checkDeclSpecifier(IBinding binding, IASTName name, IASTNode decl) {
@@ -635,7 +641,7 @@ public class CPPSemantics {
 		return data;
 	}
 
-    private static Set<ICPPNamespaceScope> getAssociatedScopes(LookupData data) {
+    private static Set<ICPPNamespaceScope> getAssociatedScopes(LookupData data, Set<ICPPFunction> friendFns) {
     	if (!data.hasFunctionArguments())
     		return Collections.emptySet();
     	
@@ -644,35 +650,35 @@ public class CPPSemantics {
         ObjectSet<IType> handled = new ObjectSet<IType>(2);
         for (IType p : ps) {
             try {
-                getAssociatedScopes(p, namespaces, handled, data.tu);
+                getAssociatedScopes(p, namespaces, friendFns, handled, data.tu);
             } catch (DOMException e) {
             }
         }
         
-        if (data.astName != null 
-        		&& CharArrayUtils.equals(CPPVisitor.BEGIN, data.astName.getSimpleID())) {
-        	IASTNode parent = data.astName.getParent();     // id-expression
-        	if (parent != null)
-        		parent= parent.getParent();     			// function call
-        	if (parent != null)
-        		parent= parent.getParent();     			// the loop
-        	if (parent != null)
-        		parent= parent.getParent();     			// unary *
-        	if (parent instanceof ICPPASTRangeBasedForStatement) {
-        		IBinding[] std= parent.getTranslationUnit().getScope().find(CPPVisitor.STD);
-        		for (IBinding binding : std) {
-        			if (binding instanceof ICPPNamespace) {
-        				namespaces.add(((ICPPNamespace) binding).getNamespaceScope());
-        			}
-        		}
-        	}
+		if (data.astName != null) {
+	        final char[] simpleID = data.astName.getSimpleID();
+	        if (CharArrayUtils.equals(CPPVisitor.BEGIN, simpleID) || CharArrayUtils.equals(CPPVisitor.END, simpleID)) {
+	        	IASTNode parent = data.astName.getParent();     // id-expression
+	        	if (parent != null)
+	        		parent= parent.getParent();     			// function call
+	        	if (parent != null)
+	        		parent= parent.getParent();     			// the loop
+	        	if (parent instanceof ICPPASTRangeBasedForStatement) {
+	        		IBinding[] std= parent.getTranslationUnit().getScope().find(CPPVisitor.STD);
+	        		for (IBinding binding : std) {
+	        			if (binding instanceof ICPPNamespace) {
+	        				namespaces.add(((ICPPNamespace) binding).getNamespaceScope());
+	        			}
+	        		}
+	        	}
+	        }
         }
         return namespaces;
     }
 
     // 3.4.2-2 
     private static void getAssociatedScopes(IType t, Set<ICPPNamespaceScope> namespaces,
-    		ObjectSet<IType> handled, CPPASTTranslationUnit tu) throws DOMException {
+    		Set<ICPPFunction> friendFns, ObjectSet<IType> handled, CPPASTTranslationUnit tu) throws DOMException {
         t = getNestedType(t, TDEF | CVTYPE | PTR | ARRAY | REF);
     	if (t instanceof IBinding) {
             if (handled.containsKey(t))
@@ -681,7 +687,7 @@ public class CPPSemantics {
             
     		IBinding owner= ((IBinding) t).getOwner();
     		if (owner instanceof ICPPClassType) {
-    			getAssociatedScopes((IType) owner, namespaces, handled, tu);
+    			getAssociatedScopes((IType) owner, namespaces, friendFns, handled, tu);
     		} else {
     			getAssociatedNamespaceScopes(getContainingNamespaceScope((IBinding) t, tu), namespaces);
     		}
@@ -692,35 +698,40 @@ public class CPPSemantics {
 			for (ICPPBase base : bases) {
 				IBinding b = base.getBaseClass();
 				if (b instanceof IType)
-					getAssociatedScopes((IType) b, namespaces, handled, tu);
+					getAssociatedScopes((IType) b, namespaces, friendFns, handled, tu);
 			}
 			// Furthermore, if T is a class template ... 
 			// * ... types of the template arguments for template type parameters 
 			//       (excluding template template parameters); 
 			// * ... owners of which any template template arguments are members; 
 			if (ct instanceof ICPPTemplateInstance) {
+				for (IBinding friend : ct.getFriends()) {
+					if (friend instanceof ICPPFunction) {
+						friendFns.add((ICPPFunction) friend);
+					}
+				}
 				ICPPTemplateArgument[] args = ((ICPPTemplateInstance) ct).getTemplateArguments();
 				for (ICPPTemplateArgument arg : args) {
 					if (arg.isTypeValue()) {
-						getAssociatedScopes(arg.getTypeValue(), namespaces, handled, tu);
+						getAssociatedScopes(arg.getTypeValue(), namespaces, friendFns, handled, tu);
 					}
 				}
 			}
 		} else if (t instanceof IFunctionType) {
 		    IFunctionType ft = (IFunctionType) t;
-		    getAssociatedScopes(ft.getReturnType(), namespaces, handled, tu);
+		    getAssociatedScopes(ft.getReturnType(), namespaces, friendFns, handled, tu);
 		    IType[] ps = ft.getParameterTypes();
 		    for (IType pt : ps) {
-		        getAssociatedScopes(pt, namespaces, handled, tu);
+		        getAssociatedScopes(pt, namespaces, friendFns, handled, tu);
 		    }
 		} else if (t instanceof ICPPPointerToMemberType) {
 		    final ICPPPointerToMemberType pmt = (ICPPPointerToMemberType) t;
-			getAssociatedScopes(pmt.getMemberOfClass(), namespaces, handled, tu);
-	        getAssociatedScopes(pmt.getType(), namespaces, handled, tu);
+			getAssociatedScopes(pmt.getMemberOfClass(), namespaces, friendFns, handled, tu);
+	        getAssociatedScopes(pmt.getType(), namespaces, friendFns, handled, tu);
 		} else if (t instanceof FunctionSetType) {
 			FunctionSetType fst= (FunctionSetType) t;
 			for (ICPPFunction fn : fst.getFunctionSet()) { 
-				getAssociatedScopes(fn.getType(), namespaces, handled, tu);
+				getAssociatedScopes(fn.getType(), namespaces, friendFns, handled, tu);
 			}
 		}			
     }
@@ -1449,7 +1460,7 @@ public class CPPSemantics {
 		    if (item instanceof ICPPASTLinkageSpecification) {
 		        IASTDeclaration[] decls = ((ICPPASTLinkageSpecification) item).getDeclarations();
 		        if (decls != null && decls.length > 0) {
-			        nodeStack = (IASTNode[][]) ArrayUtil.append(IASTNode[].class, nodeStack, nodes);
+			        nodeStack = ArrayUtil.append(IASTNode[].class, nodeStack, nodes);
 			        nodeIdxStack = ArrayUtil.setInt(nodeIdxStack, ++nodeStackPos, idx);
 			        nodes = ((ICPPASTLinkageSpecification) item).getDeclarations();
 			        idx = 0;
@@ -1782,10 +1793,11 @@ public class CPPSemantics {
 	    
         IBinding[] result = null;
         for (Object binding : bindings) {
-            if (binding instanceof IASTName)
-                result = (IBinding[]) ArrayUtil.append(IBinding.class, result, ((IASTName) binding).resolveBinding());
-            else if (binding instanceof IBinding)
-                result = (IBinding[]) ArrayUtil.append(IBinding.class, result, binding);
+            if (binding instanceof IASTName) {
+                result = ArrayUtil.append(IBinding.class, result, ((IASTName) binding).resolveBinding());
+            } else if (binding instanceof IBinding) {
+                result = ArrayUtil.append(IBinding.class, result, (IBinding) binding);
+            }
         }
         return new CPPCompositeBinding(result);
 	}
@@ -2019,15 +2031,15 @@ public class CPPSemantics {
 	            }
 	        }
 
-	        IBinding[] bindings = null;
+	        IBinding[] bindings = IBinding.EMPTY_BINDING_ARRAY;
 	        if (cmp > 0) {
-	            bindings = (IBinding[]) ArrayUtil.append(IBinding.class, bindings, obj);
-	            bindings = (IBinding[]) ArrayUtil.append(IBinding.class, bindings, type);
+	            bindings = ArrayUtil.append(bindings, obj);
+	            bindings = ArrayUtil.append(bindings, type);
 	        } else {
-	            bindings = (IBinding[]) ArrayUtil.append(IBinding.class, bindings, type);
-	            bindings = (IBinding[]) ArrayUtil.addAll(IBinding.class, bindings, fns.keyArray());
+	            bindings = ArrayUtil.append(bindings, type);
+	            bindings = ArrayUtil.addAll(bindings, fns.keyArray());
 	        }
-	        bindings = (IBinding[]) ArrayUtil.trim(IBinding.class, bindings);
+	        bindings = ArrayUtil.trim(IBinding.class, bindings);
 	        ICPPUsingDeclaration composite = new CPPUsingDeclaration(data.astName, bindings);
 	        return composite;	
 	    }
@@ -2276,7 +2288,8 @@ public class CPPSemantics {
 	private static ICPPFunction[] selectByArgumentCount(LookupData data, ICPPFunction[] functions) throws DOMException {
 	    assert data.forDeclaration() == null;
 
-	    int argumentCount = data.getFunctionArgumentCount();
+	    final int argumentCount = data.getFunctionArgumentCount();
+	    final int packExpansionCount= data.getFunctionArgumentPackExpansionCount();
 
 	    // Trim the list down to the set of viable functions
 	    ICPPFunction[] result= new ICPPFunction[functions.length];
@@ -2300,11 +2313,11 @@ public class CPPSemantics {
 					numArgs--;
 
 				boolean ok;
-				if (numArgs > numPars) {
-					// more arguments than parameters --> need ellipsis or parameter pack
+				if (numArgs-packExpansionCount > numPars) {
+					// More arguments than parameters --> need ellipsis or parameter pack
 					ok= fn.takesVarArgs() || fn.hasParameterPack();
 				} else {
-					ok = numArgs >= fn.getRequiredArgumentCount();
+					ok = numArgs >= fn.getRequiredArgumentCount() || packExpansionCount > 0;
 				}
 				if (ok) {
 					if (fn instanceof IIndexBinding) {
@@ -2327,7 +2340,7 @@ public class CPPSemantics {
 	}
 	
 	public static IBinding resolveFunction(LookupData data, ICPPFunction[] fns, boolean allowUDC) throws DOMException {
-	    fns= (ICPPFunction[]) ArrayUtil.trim(ICPPFunction.class, fns);
+	    fns= ArrayUtil.trim(ICPPFunction.class, fns);
 	    if (fns == null || fns.length == 0)
 	        return null;
 	    
@@ -2385,6 +2398,7 @@ public class CPPSemantics {
 
 		// Loop over all functions
 		List<FunctionCost> potentialCosts= null;
+		IFunction unknownFunction= null;
 		for (ICPPFunction fn : fns) {
 			if (fn == null) 
 				continue;
@@ -2395,9 +2409,9 @@ public class CPPSemantics {
 			
 			if (fnCost == CONTAINS_DEPENDENT_TYPES) {
 				if (viableCount == 1) 
-					return fns[0];
-				setTargetedFunctionsToUnknown(argTypes);
-				return CPPUnknownFunction.createForSample(fns[0]);
+					return fn;
+				unknownFunction = fn;
+				continue;
 			}
 			
 			if (fnCost.hasDeferredUDC()) {
@@ -2412,7 +2426,7 @@ public class CPPSemantics {
 				bestFnCost= fnCost;
 				ambiguousFunctions= null;
 			} else if (cmp == 0) {
-				ambiguousFunctions= (IFunction[]) ArrayUtil.append(IFunction.class, ambiguousFunctions, fn);
+				ambiguousFunctions= ArrayUtil.append(IFunction.class, ambiguousFunctions, fn);
 			}
 		}
 		
@@ -2424,17 +2438,22 @@ public class CPPSemantics {
 						bestFnCost= fnCost;
 						ambiguousFunctions= null;
 					} else if (cmp == 0) {
-						ambiguousFunctions= (IFunction[]) ArrayUtil.append(IFunction.class, ambiguousFunctions, fnCost.getFunction());
+						ambiguousFunctions= ArrayUtil.append(IFunction.class, ambiguousFunctions, fnCost.getFunction());
 					}
 				}
 			}
 		}
 
-		if (bestFnCost == null)
-			return null;
+		if (bestFnCost == null) {
+			if (unknownFunction == null) 
+				return null;
+			
+			setTargetedFunctionsToUnknown(argTypes);
+			return CPPUnknownFunction.createForSample(unknownFunction);
+		}
 		
 		if (ambiguousFunctions != null) {
-			ambiguousFunctions= (IFunction[]) ArrayUtil.append(IFunction.class, ambiguousFunctions, bestFnCost.getFunction());
+			ambiguousFunctions= ArrayUtil.append(IFunction.class, ambiguousFunctions, bestFnCost.getFunction());
 			return new ProblemBinding(data.astName, IProblemBinding.SEMANTIC_AMBIGUOUS_LOOKUP,
 					ambiguousFunctions);
 		}
@@ -2711,7 +2730,7 @@ public class CPPSemantics {
 		IType implicitType;
 		ICPPClassType owner= m.getClassOwner();
 		if (owner instanceof ICPPClassTemplate) {
-			owner= CPPTemplates.instantiateWithinClassTemplate((ICPPClassTemplate) owner);
+			owner= (ICPPClassType) ((ICPPClassTemplate) owner).asDeferredInstance();
 		}
 		ICPPFunctionType ft= m.getType();
 		implicitType= SemanticUtil.addQualifiers(owner, ft.isConst(), ft.isVolatile(), false);

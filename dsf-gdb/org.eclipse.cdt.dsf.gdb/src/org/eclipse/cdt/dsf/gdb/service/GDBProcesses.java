@@ -22,7 +22,9 @@ import org.eclipse.cdt.debug.core.CDebugUtils;
 import org.eclipse.cdt.debug.core.ICDTLaunchConfigurationConstants;
 import org.eclipse.cdt.dsf.concurrent.DataRequestMonitor;
 import org.eclipse.cdt.dsf.concurrent.DsfExecutor;
+import org.eclipse.cdt.dsf.concurrent.ImmediateDataRequestMonitor;
 import org.eclipse.cdt.dsf.concurrent.ImmediateExecutor;
+import org.eclipse.cdt.dsf.concurrent.ImmediateRequestMonitor;
 import org.eclipse.cdt.dsf.concurrent.RequestMonitor;
 import org.eclipse.cdt.dsf.concurrent.Sequence;
 import org.eclipse.cdt.dsf.datamodel.DMContexts;
@@ -99,7 +101,7 @@ public class GDBProcesses extends MIProcesses implements IGDBProcesses {
 
     @Override
     public void initialize(final RequestMonitor requestMonitor) {
-    	super.initialize(new RequestMonitor(ImmediateExecutor.getInstance(), requestMonitor) {
+    	super.initialize(new ImmediateRequestMonitor(requestMonitor) {
     		@Override
     		protected void handleSuccess() {
     			doInitialize(requestMonitor);
@@ -228,15 +230,16 @@ public class GDBProcesses extends MIProcesses implements IGDBProcesses {
     /**
 	 * @since 4.0
 	 */
+	@Override
     public void attachDebuggerToProcess(final IProcessDMContext procCtx, String binaryPath, final DataRequestMonitor<IDMContext> rm) {
 		final IMIContainerDMContext containerDmc = createContainerContext(procCtx, MIProcesses.UNIQUE_GROUP_ID);
 
-		DataRequestMonitor<MIInfo> attachRm = new DataRequestMonitor<MIInfo>(ImmediateExecutor.getInstance(), rm) {
+		DataRequestMonitor<MIInfo> attachRm = new ImmediateDataRequestMonitor<MIInfo>(rm) {
 			@Override
 			protected void handleSuccess() {
 				GDBProcesses.super.attachDebuggerToProcess(
 						procCtx, 
-						new DataRequestMonitor<IDMContext>(ImmediateExecutor.getInstance(), rm) {
+						new ImmediateDataRequestMonitor<IDMContext>(rm) {
 							@Override
 							protected void handleSuccess() {
 								// For an attach, we actually know the pid, so let's remember it
@@ -369,7 +372,7 @@ public class GDBProcesses extends MIProcesses implements IGDBProcesses {
 		} else if (thread instanceof IMIProcessDMContext) {
 			getDebuggingContext(
 					thread, 
-					new DataRequestMonitor<IDMContext>(ImmediateExecutor.getInstance(), rm) {
+					new ImmediateDataRequestMonitor<IDMContext>(rm) {
 						@Override
 						protected void handleSuccess() {
 							if (getData() instanceof IMIContainerDMContext) {
@@ -381,7 +384,7 @@ public class GDBProcesses extends MIProcesses implements IGDBProcesses {
 								final IMIContainerDMContext container = (IMIContainerDMContext)getData();
 								fGdb.queueCommand(
 										fCommandFactory.createMIInterpreterExecConsoleKill(container),
-										new DataRequestMonitor<MIInfo>(ImmediateExecutor.getInstance(), rm) {
+										new ImmediateDataRequestMonitor<MIInfo>(rm) {
 											@Override
 											protected void handleSuccess() {
 												// Before GDB 7.0, we must send a container exited event ourselves
@@ -404,12 +407,14 @@ public class GDBProcesses extends MIProcesses implements IGDBProcesses {
 	}
 	
     /** @since 4.0 */
+	@Override
     public IMIExecutionDMContext[] getExecutionContexts(IMIContainerDMContext containerDmc) {
     	assert false; // This is not being used before GDB 7.0
     	return null;
     }
     
 	/** @since 4.0 */
+	@Override
 	public void canRestart(IContainerDMContext containerDmc, DataRequestMonitor<Boolean> rm) {		
     	if (fBackend.getIsAttachSession() || fBackend.getSessionType() == SessionType.CORE) {
         	rm.setData(false);
@@ -434,6 +439,7 @@ public class GDBProcesses extends MIProcesses implements IGDBProcesses {
 	}
 	
 	/** @since 4.0 */
+	@Override
 	public void restart(IContainerDMContext containerDmc, Map<String, Object> attributes, DataRequestMonitor<IContainerDMContext> rm) {
 		// Before performing the restart, check if the process is properly suspended.
 		// Don't need to worry about non-stop before GDB 7.0, so we can simply
@@ -454,6 +460,7 @@ public class GDBProcesses extends MIProcesses implements IGDBProcesses {
 	}
 	
 	/** @since 4.0 */
+	@Override
 	public void start(IContainerDMContext containerDmc, Map<String, Object> attributes, DataRequestMonitor<IContainerDMContext> rm) {
 		startOrRestart(containerDmc, attributes, false, rm);
 	}
@@ -479,7 +486,7 @@ public class GDBProcesses extends MIProcesses implements IGDBProcesses {
     			// Tell GDB to use this PTY
     			fGdb.queueCommand(
     					fCommandFactory.createMIInferiorTTYSet((IMIContainerDMContext)containerDmc, fPty.getSlaveName()), 
-    					new DataRequestMonitor<MIInfo>(ImmediateExecutor.getInstance(), rm) {
+    					new ImmediateDataRequestMonitor<MIInfo>(rm) {
     						@Override
     						protected void handleFailure() {
     							// We were not able to tell GDB to use the PTY
@@ -498,7 +505,7 @@ public class GDBProcesses extends MIProcesses implements IGDBProcesses {
 	 * @since 4.0
 	 */
 	protected void createConsole(final IContainerDMContext containerDmc, final boolean restart, final RequestMonitor rm) {
-		initializeInputOutput(containerDmc, new RequestMonitor(ImmediateExecutor.getInstance(), rm) {
+		initializeInputOutput(containerDmc, new ImmediateRequestMonitor(rm) {
 			@Override
 			protected void handleSuccess() {
 				Process inferiorProcess;
@@ -516,6 +523,7 @@ public class GDBProcesses extends MIProcesses implements IGDBProcesses {
 				// Add the inferior to the launch.
 				// This cannot be done on the executor or things deadlock.
 				DebugPlugin.getDefault().asyncExec(new Runnable() {
+					@Override
 					public void run() {
 						if (restart) {
 							// For a restart, remove the old inferior
@@ -556,7 +564,7 @@ public class GDBProcesses extends MIProcesses implements IGDBProcesses {
     		return;
     	}
     	
-    	createConsole(containerDmc, restart, new RequestMonitor(ImmediateExecutor.getInstance(), requestMonitor) {
+    	createConsole(containerDmc, restart, new ImmediateRequestMonitor(requestMonitor) {
     		@Override
     		protected void handleSuccess() {
     			final DataRequestMonitor<MIInfo> execMonitor = new DataRequestMonitor<MIInfo>(getExecutor(), requestMonitor) {
@@ -639,7 +647,7 @@ public class GDBProcesses extends MIProcesses implements IGDBProcesses {
     				IGdbDebugPreferenceConstants.PREF_AUTO_TERMINATE_GDB,
     				true, null)) {
     			// If the inferior finishes, let's terminate GDB
-    			fGdb.terminate(new RequestMonitor(ImmediateExecutor.getInstance(), null));
+    			fGdb.terminate(new ImmediateRequestMonitor());
     		}
     	}
     	super.eventDispatched(e);

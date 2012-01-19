@@ -8,11 +8,15 @@
  *  
  * Contributors: 
  *     Institute for Software - initial API and implementation
+ *     Sergey Prigogin (Google)
  *******************************************************************************/
 package org.eclipse.cdt.internal.ui.refactoring;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.eclipse.core.runtime.ILog;
 import org.eclipse.core.runtime.IStatus;
@@ -45,21 +49,24 @@ import org.eclipse.cdt.core.dom.ast.cpp.ICPPTemplateTypeParameter;
 import org.eclipse.cdt.ui.CUIPlugin;
 
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTName;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.CPPVariableReadWriteFlags;
 import org.eclipse.cdt.internal.core.dom.rewrite.astwriter.ASTWriter;
+import org.eclipse.cdt.internal.core.pdom.dom.PDOMName;
 
 public class NodeContainer {
 	public final NameInformation NULL_NAME_INFORMATION = new NameInformation(new CPPASTName());
 
-	private final ArrayList<IASTNode> vec;
-	private final ArrayList<NameInformation> names;
+	private final List<IASTNode> nodes;
+	private List<NameInformation> names;
+	private List<NameInformation> interfaceNames;
 
 	public class NameInformation {
 		private IASTName name;
 		private IASTName declaration;
-		private final ArrayList<IASTName> references;
-		private ArrayList<IASTName> referencesAfterCached;
+		private final List<IASTName> references;
+		private List<IASTName> referencesAfterCached;
 		private int lastCachedReferencesHash;
-		private boolean isReference;
+		private boolean isOutput;
 		private boolean isReturnValue;
 		private boolean isConst;
 		private boolean isWriteAccess;
@@ -103,9 +110,8 @@ public class NodeContainer {
 			references.add(name);
 		}
 
-		public ArrayList<IASTName> getReferencesAfterSelection() {
-			if (referencesAfterCached == null
-					|| lastCachedReferencesHash != references.hashCode()) {
+		public List<IASTName> getReferencesAfterSelection() {
+			if (referencesAfterCached == null || lastCachedReferencesHash != references.hashCode()) {
 				lastCachedReferencesHash = references.hashCode();
 				referencesAfterCached = new ArrayList<IASTName>();
 				for (IASTName ref : references) {
@@ -118,8 +124,8 @@ public class NodeContainer {
 			return referencesAfterCached;
 		}
 
-		public boolean isUsedAfterReferences() {
-			return getReferencesAfterSelection().size() > 0;
+		public boolean isReferencedAfterSelection() {
+			return !getReferencesAfterSelection().isEmpty();
 		}
 
 		public IASTParameterDeclaration getParameterDeclaration(boolean isReference,
@@ -196,26 +202,25 @@ public class NodeContainer {
 			return writer.write(declSpec);
 		}
 
-		public boolean isDeclarationInScope() {
+		public boolean isDeclaredInSelection() {
 			if (declaration != null && declaration.toCharArray().length > 0) {
 				int declOffset = declaration.getFileLocation().getNodeOffset();
-				return declOffset >= getStartOffset()
-				&& declOffset <= getEndOffset();
+				return declOffset >= getStartOffset() && declOffset <= getEndOffset();
 			}
 			return true;
 		}
 
 		@Override
 		public String toString() {
-			return Messages.NodeContainer_Name + name + ' ' + isDeclarationInScope();
+			return name.toString() + (isDeclaredInSelection() ? " (declared inside)" : "");  //$NON-NLS-1$//$NON-NLS-2$
 		}
 
-		public boolean isReference() {
-			return isReference;
+		public boolean isOutput() {
+			return isOutput;
 		}
 
-		public void setReference(boolean isReference) {
-			this.isReference = isReference;
+		public void setOutput(boolean isOutput) {
+			this.isOutput = isOutput;
 		}
 
 		public boolean isReturnValue() {
@@ -269,24 +274,27 @@ public class NodeContainer {
 
 	public NodeContainer() {
 		super();
-		vec = new ArrayList<IASTNode>();
-		names = new ArrayList<NameInformation>();
+		nodes = new ArrayList<IASTNode>();
 	}
 
 	public final int size() {
-		return vec.size();
+		return nodes.size();
 	}
 
 	public final boolean isEmpty() {
-		return vec.isEmpty();
+		return nodes.isEmpty();
 	}
 
 	public void add(IASTNode node) {
-		vec.add(node);
+		nodes.add(node);
 	}
 
-	public void findAllNames() {
-		for (IASTNode node : vec) {
+	private void findAllNames() {
+		if (names != null) {
+			return;
+		}
+		names = new ArrayList<NameInformation>();
+		for (IASTNode node : nodes) {
 			node.accept(new ASTVisitor() {
 				{
 					shouldVisitNames = true;
@@ -296,8 +304,7 @@ public class NodeContainer {
 				public int visit(IASTName name) {
 					IBinding bind = name.resolveBinding();
 
-					if (bind instanceof ICPPBinding
-							&& !(bind instanceof ICPPTemplateTypeParameter)) {
+					if (bind instanceof ICPPBinding	&& !(bind instanceof ICPPTemplateTypeParameter)) {
 						ICPPBinding cppBind = (ICPPBinding) bind;
 						try {
 							if (!cppBind.isGloballyQualified()) {
@@ -328,109 +335,91 @@ public class NodeContainer {
 			});
 		}
 
-		for (NameInformation nameInf : names) {
-			IASTName name = nameInf.getName();
+		for (NameInformation nameInfo : names) {
+			IASTName name = nameInfo.getName();
 
 			IASTTranslationUnit unit = name.getTranslationUnit();
-			IASTName[] decls = unit.getDeclarationsInAST(name.resolveBinding());
-			for (IASTName declaration : decls) {
-				nameInf.setDeclaration(declaration);
+			IASTName[] nameDeclarations = unit.getDeclarationsInAST(name.resolveBinding());
+			if (nameDeclarations.length != 0) {
+				nameInfo.setDeclaration(nameDeclarations[nameDeclarations.length - 1]);
 			}
 		}
 	}
 
-	/*
-	 * Returns all local names in the selection which will be used after the
-	 * selection expected the ones which are pointers
+	/**
+	 * Returns names that are either parameter or return value candidates.
 	 */
-	public ArrayList<NameInformation> getAllAfterUsedNames() {
-		ArrayList<IASTName> declarations = new ArrayList<IASTName>();
-		ArrayList<NameInformation> usedAfter = new ArrayList<NameInformation>();
-
-		if (names.size() <= 0) {
+	private List<NameInformation> getInterfaceNames() {
+		if (interfaceNames == null) {
 			findAllNames();
-		}
-
-		for (NameInformation nameInf : names) {
-			if (!declarations.contains(nameInf.getDeclaration())) {
-				declarations.add(nameInf.getDeclaration());
-				if (nameInf.isUsedAfterReferences()) {
-					usedAfter.add(nameInf);
-					nameInf.setReference(true);
-				}
-			}
-		}
-
-		return usedAfter;
-	}
-
-	public ArrayList<NameInformation> getAllAfterUsedNamesChoosenByUser() {
-		ArrayList<IASTName> declarations = new ArrayList<IASTName>();
-		ArrayList<NameInformation> usedAfter = new ArrayList<NameInformation>();
-
-		for (NameInformation nameInf : names) {
-			if (!declarations.contains(nameInf.getDeclaration())) {
-
-				declarations.add(nameInf.getDeclaration());
-				if (nameInf.isUserSetIsReference() || nameInf.isUserSetIsReturnValue()) {
-					usedAfter.add(nameInf);
-				}
-			}
-		}
-
-		return usedAfter;
-	}
-
-	public ArrayList<NameInformation> getUsedNamesUnique() {
-		ArrayList<IASTName> declarations = new ArrayList<IASTName>();
-		ArrayList<NameInformation> usedAfter = new ArrayList<NameInformation>();
-
-		if (names.size() <= 0) {
-			findAllNames();
-		}
-
-		for (NameInformation nameInf : names) {
-			if (!declarations.contains(nameInf.getDeclaration())) {
-				declarations.add(nameInf.getDeclaration());
-				usedAfter.add(nameInf);
-			} else {
-				for (NameInformation nameInformation : usedAfter) {
-					if (nameInf.isWriteAccess()
-							&& nameInf.getDeclaration() == nameInformation.getDeclaration()) {
-						nameInformation.setWriteAccess(true);
+	
+			Set<IASTName> declarations = new HashSet<IASTName>();
+			interfaceNames = new ArrayList<NameInformation>();
+	
+			for (NameInformation nameInfo : names) {
+				if (declarations.add(nameInfo.getDeclaration())) {
+					if (nameInfo.isDeclaredInSelection()) {
+						if (nameInfo.isReferencedAfterSelection()) {
+							nameInfo.setReturnValue(true);
+							interfaceNames.add(nameInfo);
+						}
+					} else {
+						for (NameInformation n2 : names) {
+							if (n2.getDeclaration() == nameInfo.getDeclaration()) {
+								int flag = CPPVariableReadWriteFlags.getReadWriteFlags(n2.getName());
+								if ((flag & PDOMName.WRITE_ACCESS) != 0) {
+									nameInfo.setWriteAccess(true);
+									break;
+								}
+							}
+						}
+						if (nameInfo.isWriteAccess() && nameInfo.isReferencedAfterSelection()) {
+							nameInfo.setOutput(true);
+						}
+						interfaceNames.add(nameInfo);
 					}
 				}
 			}
 		}
 
-		return usedAfter;
+		return interfaceNames;
 	}
 
-	/*
-	 * Returns all local names in the selection which will be used after the
-	 * selection expected the ones which are pointers
-	 * XXX Was soll dieser Kommentar aussagen? --Mirko
-	 */
-	public ArrayList<NameInformation> getAllDeclaredInScope() {
-		ArrayList<IASTName> declarations = new ArrayList<IASTName>();
-		ArrayList<NameInformation> usedAfter = new ArrayList<NameInformation>();
+	private List<NameInformation> getInterfaceNames(boolean isReturnValue) {
+		List<NameInformation> selectedNames = null;
 
-		for (NameInformation nameInf : names) {
-			if (nameInf.isDeclarationInScope()
-					&& !declarations.contains(nameInf.getDeclaration()) && nameInf.isUsedAfterReferences()) {
-				declarations.add(nameInf.getDeclaration());
-				usedAfter.add(nameInf);
-				// is return value candidate, set return value to true and reference to false
-				nameInf.setReturnValue(true);
-				nameInf.setReference(false);
+		for (NameInformation nameInfo : getInterfaceNames()) {
+			if (nameInfo.isReturnValue() == isReturnValue) {
+				if (selectedNames == null) {
+					selectedNames = new ArrayList<NameInformation>();
+				}
+				selectedNames.add(nameInfo);
 			}
 		}
-
-		return usedAfter;
+		if (selectedNames == null) {
+			selectedNames = Collections.emptyList();
+		}
+		return selectedNames;
 	}
 
+	/**
+	 * Returns names that are candidates to be used as function parameters.
+	 */
+	public List<NameInformation> getParameterCandidates() {
+		return getInterfaceNames(false);
+	}
+	
+
+	/**
+	 * Returns names that are candidates for being used as the function return value. Multiple
+	 * return value candidates mean that the function cannot be extracted.
+	 */
+	public List<NameInformation> getReturnValueCandidates() {
+		return getInterfaceNames(true);
+	}
+	
 	public List<IASTNode> getNodesToWrite() {
-		return vec;
+		return nodes;
 	}
 
 	public int getStartOffset() {
@@ -444,7 +433,7 @@ public class NodeContainer {
 	private int getOffset(boolean includeComments) {
 		int start = Integer.MAX_VALUE;
 
-		for (IASTNode node : vec) {
+		for (IASTNode node : nodes) {
 			int nodeStart = Integer.MAX_VALUE;
 
 			IASTNodeLocation[] nodeLocations = node.getNodeLocations();
@@ -483,7 +472,7 @@ public class NodeContainer {
 	private int getEndOffset(boolean includeComments) {
 		int end = 0;
 
-		for (IASTNode node : vec) {
+		for (IASTNode node : nodes) {
 			int fileOffset = 0;
 			int length = 0;
 
@@ -514,10 +503,11 @@ public class NodeContainer {
 
 	@Override
 	public String toString() {
-		return vec.toString();
+		return nodes.toString();
 	}
 
 	public List<NameInformation> getNames() {
+		findAllNames();
 		return names;
 	}
 }

@@ -21,7 +21,8 @@ import java.util.List;
 import org.eclipse.cdt.debug.core.ICDTLaunchConfigurationConstants;
 import org.eclipse.cdt.dsf.concurrent.CountingRequestMonitor;
 import org.eclipse.cdt.dsf.concurrent.DataRequestMonitor;
-import org.eclipse.cdt.dsf.concurrent.ImmediateExecutor;
+import org.eclipse.cdt.dsf.concurrent.ImmediateCountingRequestMonitor;
+import org.eclipse.cdt.dsf.concurrent.ImmediateDataRequestMonitor;
 import org.eclipse.cdt.dsf.concurrent.Query;
 import org.eclipse.cdt.dsf.concurrent.RequestMonitor;
 import org.eclipse.cdt.dsf.datamodel.CompositeDMContext;
@@ -102,7 +103,8 @@ public class MIRegistersTest extends BaseTestCase {
 	    fSession = getGDBLaunch().getSession();
 	    
         Runnable runnable = new Runnable() {
-            public void run() {
+            @Override
+			public void run() {
 	    		// We obtain the services we need after the new
 	    		// launch has been performed
 	    		fServicesTracker = new DsfServicesTracker(TestsPlugin.getBundleContext(), fSession.getId());
@@ -152,7 +154,8 @@ public class MIRegistersTest extends BaseTestCase {
         };
         
         fRegService.getExecutor().submit(new Runnable() {
-            public void run() {
+            @Override
+			public void run() {
             	fRegService.getRegisterGroups(fContainerDmc, regGroupDone);
             }
         });
@@ -177,7 +180,8 @@ public class MIRegistersTest extends BaseTestCase {
     	final IRegisterGroupDMContext regGroupsDMC = getRegisterGroup();
 
    		fRegService.getExecutor().submit(new Runnable() {
-   			public void run() {
+   			@Override
+			public void run() {
    				fRegService.getRegisters(
    				    new CompositeDMContext(new IDMContext[] { regGroupsDMC, frameDmc} ), 
    		            new DataRequestMonitor<IRegisterDMContext[]>(fRegService.getExecutor(), null) {
@@ -250,13 +254,13 @@ public class MIRegistersTest extends BaseTestCase {
             protected void execute(DataRequestMonitor<IRegisterDMData[]> rm) {
                 final IRegisterDMData[] datas = new IRegisterDMData[regDMCs.length];
                 rm.setData(datas);
-                final CountingRequestMonitor countingRm = new CountingRequestMonitor(ImmediateExecutor.getInstance(), rm);
+                final CountingRequestMonitor countingRm = new ImmediateCountingRequestMonitor(rm);
                 countingRm.setDoneCount(regDMCs.length);
                 for (int i = 0; i < regDMCs.length; i++) {
                     final int index = i; 
                     fRegService.getRegisterData(
                         regDMCs[index], 
-                        new DataRequestMonitor<IRegisterDMData>(ImmediateExecutor.getInstance(), countingRm) {
+                        new ImmediateDataRequestMonitor<IRegisterDMData>(countingRm) {
                             @Override
                             protected void handleSuccess() {
                                 datas[index] = getData();
@@ -297,7 +301,8 @@ public class MIRegistersTest extends BaseTestCase {
         };
         
         fRegService.getExecutor().submit(new Runnable() {
-            public void run() {
+            @Override
+			public void run() {
             	fRegService.getFormattedExpressionValue(valueDmc, regRm);
             }
         });
@@ -363,7 +368,8 @@ public class MIRegistersTest extends BaseTestCase {
         };
     	    	
     	fRegService.getExecutor().submit(new Runnable() {
-            public void run() {
+            @Override
+			public void run() {
             	fRunControl.getExecutionContexts(containerDmc, drm);
             }
     	});
@@ -419,6 +425,7 @@ public class MIRegistersTest extends BaseTestCase {
     	final IRegisterDMContext[] regDMCs = getRegisters(frameDmc);
 
 		fRegService.getExecutor().submit(new Runnable() {
+			@Override
 			public void run() {
 			    fRegService.writeRegister(
 	                regDMCs[regIndex], 

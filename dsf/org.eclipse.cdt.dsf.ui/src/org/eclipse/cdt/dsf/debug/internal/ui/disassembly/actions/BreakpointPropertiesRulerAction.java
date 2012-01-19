@@ -49,20 +49,22 @@ public class BreakpointPropertiesRulerAction extends AbstractDisassemblyBreakpoi
             CBreakpointPropertyDialogAction propertiesAction = new CBreakpointPropertyDialogAction(
                 getDisassemblyPart().getSite(), 
                 new ISelectionProvider() {
+                    @Override
                     public ISelection getSelection() {
                         return new StructuredSelection( fBreakpoint );
                     }
-                    public void addSelectionChangedListener( ISelectionChangedListener listener ) {}
-                    public void removeSelectionChangedListener( ISelectionChangedListener listener ) {}
-                    public void setSelection( ISelection selection ) {}
+                    @Override public void addSelectionChangedListener( ISelectionChangedListener listener ) {}
+                    @Override public void removeSelectionChangedListener( ISelectionChangedListener listener ) {}
+                    @Override public void setSelection( ISelection selection ) {}
                 }, 
                 new IDebugContextProvider() {
+                    @Override
                     public ISelection getActiveContext() {
                         return debugContext;
                     }
-                    public void addDebugContextListener(IDebugContextListener listener) {}
-                    public void removeDebugContextListener(IDebugContextListener listener) {}
-                    public IWorkbenchPart getPart() { return null; }
+                    @Override public void addDebugContextListener(IDebugContextListener listener) {}
+                    @Override public void removeDebugContextListener(IDebugContextListener listener) {}
+                    @Override public IWorkbenchPart getPart() { return null; }
                     
                 }
                 );
