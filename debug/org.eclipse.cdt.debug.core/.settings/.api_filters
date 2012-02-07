@@ -7,6 +7,46 @@
             </message_arguments>
         </filter>
     </resource>
+    <resource path="src/org/eclipse/cdt/debug/core/model/ICBreakpoint.java" type="org.eclipse.cdt.debug.core.model.ICBreakpoint">
+        <filter id="403767336">
+            <message_arguments>
+                <message_argument value="org.eclipse.cdt.debug.core.model.ICBreakpoint"/>
+                <message_argument value="ATTR_REQUESTED_COLUMN"/>
+            </message_arguments>
+        </filter>
+        <filter id="403767336">
+            <message_arguments>
+                <message_argument value="org.eclipse.cdt.debug.core.model.ICBreakpoint"/>
+                <message_argument value="ATTR_REQUESTED_FILE"/>
+            </message_arguments>
+        </filter>
+        <filter id="403767336">
+            <message_arguments>
+                <message_argument value="org.eclipse.cdt.debug.core.model.ICBreakpoint"/>
+                <message_argument value="ATTR_REQUESTED_LINE"/>
+            </message_arguments>
+        </filter>
+        <filter id="403804204">
+            <message_arguments>
+                <message_argument value="org.eclipse.cdt.debug.core.model.ICBreakpoint"/>
+                <message_argument value="refreshMessage()"/>
+            </message_arguments>
+        </filter>
+    </resource>
+    <resource path="src/org/eclipse/cdt/debug/core/model/ICLineBreakpoint.java" type="org.eclipse.cdt.debug.core.model.ICLineBreakpoint">
+        <filter id="403804204">
+            <message_arguments>
+                <message_argument value="org.eclipse.cdt.debug.core.model.ICLineBreakpoint"/>
+                <message_argument value="getInstalledLineNumber()"/>
+            </message_arguments>
+        </filter>
+        <filter id="403804204">
+            <message_arguments>
+                <message_argument value="org.eclipse.cdt.debug.core.model.ICLineBreakpoint"/>
+                <message_argument value="setInstalledLineNumber(int)"/>
+            </message_arguments>
+        </filter>
+    </resource>
     <resource path="src/org/eclipse/cdt/debug/core/sourcelookup/MappingSourceContainer.java" type="org.eclipse.cdt.debug.core.sourcelookup.MappingSourceContainer">
         <filter id="643846161">
             <message_arguments>

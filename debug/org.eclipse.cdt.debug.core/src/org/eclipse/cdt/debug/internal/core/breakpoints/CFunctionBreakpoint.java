@@ -14,7 +14,9 @@ import com.ibm.icu.text.MessageFormat;
 import java.util.Map;
 
 import org.eclipse.cdt.debug.core.CDebugUtils;
+import org.eclipse.cdt.debug.core.model.ICBreakpoint;
 import org.eclipse.cdt.debug.core.model.ICFunctionBreakpoint;
+import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
 
@@ -50,6 +52,21 @@ public class CFunctionBreakpoint extends AbstractLineBreakpoint implements ICFun
 	 */
 	@Override
 	protected String getMarkerMessage() throws CoreException {
-		return MessageFormat.format( BreakpointMessages.getString( "CFunctionBreakpoint.0" ), new String[] { CDebugUtils.getBreakpointText( this, false ) } ); //$NON-NLS-1$
+		return MessageFormat.format( BreakpointMessages.getString( "CFunctionBreakpoint.0" ), (Object[])new String[] { CDebugUtils.getBreakpointText( this, false ) } ); //$NON-NLS-1$
 	}
+	
+	public int getInstalledLineNumber() throws CoreException {
+		IMarker m = getMarker();
+		if (m != null) {
+			return m.getAttribute(ICBreakpoint.ATTR_REQUESTED_LINE, -1);
+		}
+		return -1;
+	}
+
+	public void setInstalledLineNumber(int lineNum) throws CoreException {
+		IMarker m = getMarker();
+		if (m != null) {
+			m.setAttribute(ICBreakpoint.ATTR_REQUESTED_LINE, lineNum);
+		}		
+	}	
 }

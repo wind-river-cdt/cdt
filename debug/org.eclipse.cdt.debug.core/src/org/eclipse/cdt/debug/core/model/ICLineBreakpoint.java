@@ -77,4 +77,23 @@ public interface ICLineBreakpoint extends ICBreakpoint, ILineBreakpoint {
 	 *  underlying marker
 	 */
 	public String getFileName() throws CoreException;
+
+	/**
+	 * Returns the initial line set for this breakpoint.
+	 *  
+	 * @since 7.2
+	 * @return the line number for this breakpoint
+	 * @throws CoreException if unable to access the property on this breakpoint's
+	 *  underlying marker
+	 */
+	public int getInstalledLineNumber() throws CoreException;
+
+	/**
+	 * Update the line set for this breakpoint.
+	 *  
+	 * @since 7.2
+	 * @throws CoreException if unable to access the property on this breakpoint's
+	 *  underlying marker
+	 */
+	public void setInstalledLineNumber( int lineNum ) throws CoreException;
 }

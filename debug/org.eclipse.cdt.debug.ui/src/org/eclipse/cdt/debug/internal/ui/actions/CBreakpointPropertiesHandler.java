@@ -12,13 +12,15 @@
 package org.eclipse.cdt.debug.internal.ui.actions;
 
 import org.eclipse.cdt.debug.core.model.ICBreakpoint;
-import org.eclipse.cdt.debug.internal.ui.CBreakpointContext;
+import org.eclipse.cdt.debug.ui.breakpoints.CBreakpointPropertyDialogAction;
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.core.expressions.IEvaluationContext;
 import org.eclipse.debug.core.DebugPlugin;
 import org.eclipse.debug.ui.DebugUITools;
+import org.eclipse.debug.ui.contexts.IDebugContextListener;
+import org.eclipse.debug.ui.contexts.IDebugContextProvider;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.ISelectionProvider;
@@ -26,7 +28,6 @@ import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.ui.ISources;
 import org.eclipse.ui.IWorkbenchPart;
-import org.eclipse.ui.dialogs.PropertyDialogAction;
 import org.eclipse.ui.handlers.HandlerUtil;
 
 /**
@@ -44,36 +45,38 @@ public class CBreakpointPropertiesHandler extends AbstractHandler {
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
 	    IWorkbenchPart part = HandlerUtil.getActivePartChecked(event);
-        ICBreakpoint bp = getBreakpoint(event.getApplicationContext());
+        final ICBreakpoint bp = getBreakpoint(event.getApplicationContext());
 	    
 	    if (part != null && bp != null) {
-	        ISelection debugContext = DebugUITools.getDebugContextManager().
-	            getContextService(part.getSite().getWorkbenchWindow()).getActiveContext();
-
-	        final CBreakpointContext bpContext = new CBreakpointContext(bp, debugContext);
-	        
-            PropertyDialogAction propertyAction = new PropertyDialogAction( part.getSite(), new ISelectionProvider() {
-    
-                @Override
-				public void addSelectionChangedListener( ISelectionChangedListener listener ) {
+            final ISelection debugContext = DebugUITools.getDebugContextManager().
+                getContextService(part.getSite().getWorkbenchWindow()).getActiveContext();
+            
+            CBreakpointPropertyDialogAction propertiesAction = new CBreakpointPropertyDialogAction(
+                part.getSite(), 
+                new ISelectionProvider() {
+                    @Override
+                    public ISelection getSelection() {
+                        return new StructuredSelection( bp );
+                    }
+                    @Override public void addSelectionChangedListener( ISelectionChangedListener listener ) {}
+                    @Override public void removeSelectionChangedListener( ISelectionChangedListener listener ) {}
+                    @Override public void setSelection( ISelection selection ) {}
+                }, 
+                new IDebugContextProvider() {
+                    @Override
+                    public ISelection getActiveContext() {
+                        return debugContext;
+                    }
+                    @Override public void addDebugContextListener(IDebugContextListener listener) {}
+                    @Override public void removeDebugContextListener(IDebugContextListener listener) {}
+                    @Override public IWorkbenchPart getPart() { return null; }
+                    
                 }
-    
-                @Override
-				public ISelection getSelection() {
-                    return new StructuredSelection( bpContext );
-                }
-    
-                @Override
-				public void removeSelectionChangedListener( ISelectionChangedListener listener ) {
-                }
-    
-                @Override
-				public void setSelection( ISelection selection ) {
-                    assert false; // Not supported
-                }
-            } );
-            propertyAction.run();
-	    }	    
+                );
+            propertiesAction.run();
+            propertiesAction.dispose();
+        }
+	    
 	    return null;
 	}
 	

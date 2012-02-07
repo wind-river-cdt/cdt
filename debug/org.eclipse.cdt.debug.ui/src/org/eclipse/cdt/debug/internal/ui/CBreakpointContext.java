@@ -13,6 +13,7 @@ package org.eclipse.cdt.debug.internal.ui;
 
 import org.eclipse.cdt.debug.core.model.ICBreakpoint;
 import org.eclipse.cdt.debug.core.model.ICTracepoint;
+import org.eclipse.cdt.debug.internal.ui.propertypages.CBreakpointPreferenceStore;
 import org.eclipse.core.runtime.IAdaptable;
 import org.eclipse.core.runtime.IAdapterFactory;
 import org.eclipse.core.runtime.Platform;
@@ -20,9 +21,13 @@ import org.eclipse.core.runtime.PlatformObject;
 import org.eclipse.debug.core.model.IBreakpoint;
 import org.eclipse.debug.core.model.IDebugElement;
 import org.eclipse.debug.core.model.IDebugModelProvider;
+import org.eclipse.debug.ui.contexts.IDebugContextListener;
+import org.eclipse.debug.ui.contexts.IDebugContextProvider;
+import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.ui.IActionFilter;
+import org.eclipse.ui.IWorkbenchPart;
 
 /**
  * Input for breakpoint properties dialog.  It captures both the 
@@ -30,7 +35,7 @@ import org.eclipse.ui.IActionFilter;
  * This combined context can then be used by breakpoint property
  * pages to access model and target specific breakpoint settings.  
  */
-public class CBreakpointContext extends PlatformObject {
+public class CBreakpointContext extends PlatformObject implements IDebugContextProvider {
 
     // Register an adapter factory for the class when it is first loaded.
     static {
@@ -40,7 +45,7 @@ public class CBreakpointContext extends PlatformObject {
     /**
      * Breakpoint object held by this context.
      */
-    private final ICBreakpoint fBreakpoint;
+    private final ICBreakpoint[] fBreakpoints;
     
     /**
      * The active debug context held by this context.
@@ -48,23 +53,47 @@ public class CBreakpointContext extends PlatformObject {
     private final ISelection fDebugContext;
     
     /**
+     * Associated preference store.
+     */
+    final static CBreakpointPreferenceStore fPreferenceStore = new CBreakpointPreferenceStore();
+    
+    /**
      * Creates a new breakpoint context with given breakpoint and debbug 
      * context selection.
      */
     public CBreakpointContext(ICBreakpoint breakpoint, ISelection debugContext) {
-        fBreakpoint = breakpoint;
-        fDebugContext = debugContext;
+        this (new ICBreakpoint[] { breakpoint }, debugContext );
     }
 
+    public CBreakpointContext(ICBreakpoint[] breakpoints, ISelection debugContext) {
+        fBreakpoints = breakpoints;
+        fDebugContext = debugContext;
+        fPreferenceStore.setContext(this);
+    }
+    
     /**
      * Returns the breakpoint.
      */
-    public ICBreakpoint getBreakpoint() { return fBreakpoint; }
+    public ICBreakpoint getBreakpoint() { return fBreakpoints[0]; }
     
+    public ICBreakpoint[] getBreakpoints() { return fBreakpoints; }
+
     /**
      * Returns the debug context.
      */
     public ISelection getDebugContext() { return fDebugContext; }
+
+    /**
+     * (non-Javadoc)
+     * @see org.eclipse.debug.ui.contexts.IDebugContextProvider implementation
+     */
+	public IWorkbenchPart getPart() { return null; }
+	public void addDebugContextListener(IDebugContextListener listener) {}
+	public void removeDebugContextListener(IDebugContextListener listener) {}
+
+	public ISelection getActiveContext() {
+		return fDebugContext;
+	}
 }
 
 /**
@@ -116,7 +145,7 @@ class CBreakpointContextActionFilter implements IActionFilter {
 class CBreakpointContextAdapterFactory implements IAdapterFactory {
     
     private static final Class[] fgAdapterList = new Class[] {
-        IBreakpoint.class, ICBreakpoint.class, ICTracepoint.class, IActionFilter.class
+        IBreakpoint.class, ICBreakpoint.class, ICTracepoint.class, IActionFilter.class, IPreferenceStore.class
     };
 
     private static final IActionFilter fgActionFilter = new CBreakpointContextActionFilter();
@@ -125,6 +154,10 @@ class CBreakpointContextAdapterFactory implements IAdapterFactory {
 	public Object getAdapter(Object obj, Class adapterType) {
         if (adapterType.isInstance( ((CBreakpointContext)obj).getBreakpoint() )) {
             return ((CBreakpointContext)obj).getBreakpoint();
+        }
+        
+        if ( IPreferenceStore.class.equals(adapterType) ) {
+        	return CBreakpointContext.fPreferenceStore;
         }
         
         if (IActionFilter.class.equals(adapterType)) {

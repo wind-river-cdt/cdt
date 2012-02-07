@@ -290,6 +290,14 @@ public abstract class CBreakpoint extends Breakpoint implements ICBreakpoint, IC
 		// when install count == 0
 		setAttribute(INSTALL_COUNT, fInstallCount);
 		
+		if (fInstallCount == 0) {
+			if (this.getMarker().getAttribute(ATTR_REQUESTED_LINE) != null) {
+				int line = this.getMarker().getAttribute(ATTR_REQUESTED_LINE, -1);
+				setAttribute(IMarker.LINE_NUMBER, line);
+				setAttribute( IMarker.MESSAGE, getMarkerMessage() );
+			}
+		}
+		
 		return fInstallCount;
 	}
 
@@ -434,6 +442,9 @@ public abstract class CBreakpoint extends Breakpoint implements ICBreakpoint, IC
 	    }        
         return (ICBreakpointExtension[])fExtensions.get(debugModelId);
 	}
-	
-	
+
+	public void refreshMessage() throws CoreException {
+	    IMarker marker = ensureMarker();
+	    marker.setAttribute(IMarker.MESSAGE, getMarkerMessage());
+	}
 }
