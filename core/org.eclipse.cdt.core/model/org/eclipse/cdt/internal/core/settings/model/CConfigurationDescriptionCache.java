@@ -16,7 +16,10 @@ import java.util.Map;
 
 import org.eclipse.cdt.core.cdtvariables.ICdtVariable;
 import org.eclipse.cdt.core.cdtvariables.ICdtVariablesContributor;
+import org.eclipse.cdt.core.language.settings.providers.ILanguageSettingsProvider;
+import org.eclipse.cdt.core.language.settings.providers.ILanguageSettingsProvidersKeeper;
 import org.eclipse.cdt.core.settings.model.CConfigurationStatus;
+import org.eclipse.cdt.core.settings.model.CProjectDescriptionEvent;
 import org.eclipse.cdt.core.settings.model.ICBuildSetting;
 import org.eclipse.cdt.core.settings.model.ICConfigExtensionReference;
 import org.eclipse.cdt.core.settings.model.ICConfigurationDescription;
@@ -44,7 +47,6 @@ import org.eclipse.cdt.core.settings.model.extension.CResourceData;
 import org.eclipse.cdt.core.settings.model.extension.CTargetPlatformData;
 import org.eclipse.cdt.core.settings.model.extension.impl.CDefaultConfigurationData;
 import org.eclipse.cdt.core.settings.model.util.CDataUtil;
-import org.eclipse.cdt.core.settings.model.util.CSettingEntryFactory;
 import org.eclipse.cdt.core.settings.model.util.PathSettingsContainer;
 import org.eclipse.cdt.internal.core.cdtvariables.CdtVariableManager;
 import org.eclipse.cdt.internal.core.cdtvariables.StorableCdtVariables;
@@ -53,8 +55,42 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.QualifiedName;
 
+/**
+ * CConfigurationDescriptionCache is a proxy class for serialization of configuration description data.
+ *
+ * An inspection of the scenario where user changes project properties and saves it yields
+ * following sequence of events:
+ * <ol>
+ * <li> Initialization:
+ *   <ul>
+ *   <li> After eclipse started a project is being opened. A new CConfigurationDescriptionCache is created
+ *        with CConfigurationDescriptionCache(ICStorageElement storage, CProjectDescription parent) constructor.
+ *   <li> Any clients needed ICConfigurationDescription get CConfigurationDescription using constructor
+ *        CConfigurationDescription(CConfigurationData data, String buildSystemId, ICDataProxyContainer cr)
+ *        where the CConfigurationDescriptionCache is passed as data. The reference to cache is kept in field fCfgCache.
+ *   <li> fCfgCache is used to getSpecSettings() CConfigurationSpecSettings, after that fCfgCache is set to null.
+ *   </ul>
+ * <li> User enters project properties/settings:
+ *   <ul>
+ *   <li> another CConfigurationDescription (settings configuration) created using the same constructor setting fCfgCache
+ *        to the CConfigurationDescriptionCache.
+ *   </ul>
+ * <li> User changes settings (in the settings configuration CConfigurationDescription) and saves it:
+ *   <ul>
+ *   <li> new CConfigurationDescriptionCache is created from the CConfigurationDescription via constructor
+ *        CConfigurationDescriptionCache(ICConfigurationDescription baseDescription, ...) where
+ *        baseDescription is saved as fBaseDescription.
+ *   <li> CConfigurationDescriptionCache.applyData(...) is used to persist the data. at that point
+ *        reference fBaseDescription gets set to null.
+ *   </ul>
+ * </ol>
+ *
+ * @see ICConfigurationDescription
+ * @see CConfigurationDescription
+ * @see CProjectDescriptionEvent
+ */
 public class CConfigurationDescriptionCache extends CDefaultConfigurationData
-		implements ICConfigurationDescription, IInternalCCfgInfo, ICachedData {
+		implements ICConfigurationDescription, IInternalCCfgInfo, ILanguageSettingsProvidersKeeper, ICachedData {
 	private CProjectDescription fParent;
 	private PathSettingsContainer fPathSettingContainer = PathSettingsContainer.createRootContainer();
 	private ResourceDescriptionHolder fRcHolder = new ResourceDescriptionHolder(fPathSettingContainer, true);
@@ -67,7 +103,6 @@ public class CConfigurationDescriptionCache extends CDefaultConfigurationData
 	private boolean fDataLoadded;
 	private boolean fInitializing;
 	private ICConfigurationDescription fBaseDescription;
-	private CSettingEntryFactory fSettingsFactory;
 	private ICSourceEntry[] fResolvedSourceEntries;
 
 	CConfigurationDescriptionCache(ICStorageElement storage, CProjectDescription parent) throws CoreException{
@@ -86,7 +121,7 @@ public class CConfigurationDescriptionCache extends CDefaultConfigurationData
 		return fInitializing;
 	}
 
-	void loadData(CSettingEntryFactory factory) throws CoreException{
+	void loadData() throws CoreException{
 		if(fDataLoadded)
 			return;
 
@@ -94,11 +129,7 @@ public class CConfigurationDescriptionCache extends CDefaultConfigurationData
 
 		fData = CProjectDescriptionManager.getInstance().loadData(this, null);
 
-		fSettingsFactory = factory;
-
 		copySettingsFrom(fData, true);
-
-		fSettingsFactory = null;
 
 		fSpecSettings.reconcileExtensionSettings(true);
 		((CBuildSettingCache)fBuildData).initEnvironmentCache();
@@ -130,7 +161,7 @@ public class CConfigurationDescriptionCache extends CDefaultConfigurationData
 		return fBaseCache;
 	}
 
-	boolean applyData(CSettingEntryFactory factory, SettingsContext context) throws CoreException{
+	boolean applyData(SettingsContext context) throws CoreException{
 		boolean modified = true;
 		if(fBaseDescription != null){
 
@@ -138,7 +169,6 @@ public class CConfigurationDescriptionCache extends CDefaultConfigurationData
 			fDataLoadded = true;
 			fName = fData.getName();
 			fId = fData.getId();
-			fSettingsFactory = factory;
 
 			if((context.getAllConfigurationSettingsFlags() & IModificationContext.CFG_DATA_SETTINGS_UNMODIFIED) == 0  || fBaseCache == null){
 				copySettingsFrom(fData, true);
@@ -148,8 +178,6 @@ public class CConfigurationDescriptionCache extends CDefaultConfigurationData
 				if(!modified)
 					modified = (context.getAllConfigurationSettingsFlags() & IModificationContext.CFG_DATA_STORAGE_UNMODIFIED) == 0;
 			}
-
-			fSettingsFactory = null;
 
 			ICdtVariable vars[] = CdtVariableManager.getDefault().getVariables(this);
 			fMacros = new StorableCdtVariables(vars, true);
@@ -162,10 +190,6 @@ public class CConfigurationDescriptionCache extends CDefaultConfigurationData
 		fBaseCache = null;
 
 		return modified;
-	}
-
-	CSettingEntryFactory getSettingsFactory(){
-		return fSettingsFactory;
 	}
 
 	public StorableCdtVariables getCachedVariables(){
@@ -580,4 +604,27 @@ public class CConfigurationDescriptionCache extends CDefaultConfigurationData
 		return status != null ? status : CConfigurationStatus.CFG_STATUS_OK;
 	}
 
+	@Override
+	public void setLanguageSettingProviders(List<ILanguageSettingsProvider> providers) {
+		if(!fInitializing)
+			throw ExceptionFactory.createIsReadOnlyException();
+		fSpecSettings.setLanguageSettingProviders(providers);
+	}
+
+	@Override
+	public List<ILanguageSettingsProvider> getLanguageSettingProviders() {
+		return fSpecSettings.getLanguageSettingProviders();
+	}
+
+	@Override
+	public void setDefaultLanguageSettingsProvidersIds(String[] ids) {
+		if(!fInitializing)
+			throw ExceptionFactory.createIsReadOnlyException();
+		fSpecSettings.setDefaultLanguageSettingsProvidersIds(ids);
+	}
+
+	@Override
+	public String[] getDefaultLanguageSettingsProvidersIds() {
+		return fSpecSettings.getDefaultLanguageSettingsProvidersIds();
+	}
 }

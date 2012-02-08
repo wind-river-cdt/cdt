@@ -50,6 +50,8 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
 import org.eclipse.cdt.core.CCorePlugin;
+import org.eclipse.cdt.core.language.settings.providers.ILanguageSettingsProvider;
+import org.eclipse.cdt.core.language.settings.providers.ILanguageSettingsProvidersKeeper;
 import org.eclipse.cdt.core.model.CModelException;
 import org.eclipse.cdt.core.model.ICElement;
 import org.eclipse.cdt.core.model.ICElementDelta;
@@ -84,7 +86,6 @@ import org.eclipse.cdt.core.settings.model.extension.CResourceData;
 import org.eclipse.cdt.core.settings.model.extension.ICProjectConverter;
 import org.eclipse.cdt.core.settings.model.extension.impl.CDataFactory;
 import org.eclipse.cdt.core.settings.model.util.CDataUtil;
-import org.eclipse.cdt.core.settings.model.util.CSettingEntryFactory;
 import org.eclipse.cdt.core.settings.model.util.KindBasedStore;
 import org.eclipse.cdt.core.settings.model.util.ListComparator;
 import org.eclipse.cdt.core.settings.model.util.PathSettingsContainer;
@@ -1570,6 +1571,14 @@ public class CProjectDescriptionManager implements ICProjectDescriptionManager {
 				CCorePlugin.log(e);
 			}
 
+			List<ILanguageSettingsProvider> newLSProviders = null;
+			if (newCfg instanceof ILanguageSettingsProvidersKeeper)
+				newLSProviders = ((ILanguageSettingsProvidersKeeper) newCfg).getLanguageSettingProviders();
+			List<ILanguageSettingsProvider> oldLSProviders = null;
+			if (oldCfg instanceof ILanguageSettingsProvidersKeeper)
+				oldLSProviders = ((ILanguageSettingsProvidersKeeper) oldCfg).getLanguageSettingProviders();
+			if(newLSProviders != oldLSProviders && (newLSProviders == null || !newLSProviders.equals(oldLSProviders)))
+				delta.addChangeFlags(ICDescriptionDelta.LANGUAGE_SETTINGS_PROVIDERS);
 
 			calculateCfgExtSettingsDelta(delta);
 
@@ -2315,11 +2324,9 @@ public class CProjectDescriptionManager implements ICProjectDescriptionManager {
 		ICStorageElement baseRootEl = settings.getRootStorageElement();
 		rootEl = rootParent.importChild(baseRootEl);
 		CConfigurationDescriptionCache cache = new CConfigurationDescriptionCache(des, baseData, baseCache, cfgDes.getSpecSettings(), null, rootEl);
-		CSettingEntryFactory factory = new CSettingEntryFactory();
 		SettingsContext context = new SettingsContext(null);
-		cache.applyData(factory, context);
+		cache.applyData(context);
 		cache.doneInitialization();
-		factory.clear();
 		runContextOperations(context, null);
 		return cache;
 	}
@@ -2394,10 +2401,8 @@ public class CProjectDescriptionManager implements ICProjectDescriptionManager {
 
 		}
 		CConfigurationDescriptionCache cache = new CConfigurationDescriptionCache(cfgEl, null);
-		CSettingEntryFactory factory = new CSettingEntryFactory();
-		cache.loadData(factory);
+		cache.loadData();
 		cache.doneInitialization();
-		factory.clear();
 		return cache;
 	}
 

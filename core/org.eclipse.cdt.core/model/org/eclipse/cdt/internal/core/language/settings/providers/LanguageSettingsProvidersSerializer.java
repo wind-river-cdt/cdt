@@ -51,7 +51,6 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.ListenerList;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.ILock;
-import org.eclipse.core.runtime.jobs.ISchedulingRule;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.eclipse.core.runtime.preferences.InstanceScope;
@@ -259,9 +258,15 @@ public class LanguageSettingsProvidersSerializer {
 						CCorePlugin.log(e);
 					}
 					if (specSettings != null) {
-						LanguageSettingsDelta delta = specSettings.dropDelta();
-						if (delta != null)
-							deltaMap.put(cfgDescription.getId(), delta);
+						String cfgId = cfgDescription.getId();
+						if (ScannerDiscoveryLegacySupport.isLanguageSettingsProvidersFunctionalityEnabled(prjDescription.getProject())) {
+							LanguageSettingsDelta delta = specSettings.dropDelta();
+							if (delta != null) {
+								deltaMap.put(cfgId, delta);
+							}
+						} else {
+							deltaMap.remove(cfgId);
+						}
 					} else {
 						IStatus ss = new Status(IStatus.ERROR, CCorePlugin.PLUGIN_ID, "Internal error: Missing specSettings for " //$NON-NLS-1$
 								+ cfgDescription.getClass().getSimpleName());
@@ -983,16 +988,6 @@ public class LanguageSettingsProvidersSerializer {
 	public static void loadLanguageSettings(ICProjectDescription prjDescription) {
 		IProject project = prjDescription.getProject();
 		IFile storeInPrjArea = getStoreInProjectArea(project);
-		try {
-			Job currentJob = Job.getJobManager().currentJob();
-			ISchedulingRule currentRule = (currentJob != null) ? currentJob.getRule() : null;
-			if ((currentRule == null || currentRule.contains(storeInPrjArea)) && !ResourcesPlugin.getWorkspace().isTreeLocked()) {
-				storeInPrjArea.refreshLocal(IResource.DEPTH_ZERO, null);
-			}
-		} catch (Throwable e) {
-			// ignore failure
-			CCorePlugin.log("Internal Error trying to call IResourse.refreshLocal()", e); //$NON-NLS-1$
-		}
 		if (storeInPrjArea.exists()) {
 			Document doc = null;
 			try {
@@ -1051,10 +1046,7 @@ public class LanguageSettingsProvidersSerializer {
 				ICConfigurationDescription[] cfgDescriptions = prjDescription.getConfigurations();
 				for (ICConfigurationDescription cfgDescription : cfgDescriptions) {
 					if (cfgDescription instanceof ILanguageSettingsProvidersKeeper) {
-						List<ILanguageSettingsProvider> providers = new ArrayList<ILanguageSettingsProvider>(2);
-						providers.add(LanguageSettingsExtensionManager.getExtensionProviderCopy((ScannerDiscoveryLegacySupport.USER_LANGUAGE_SETTINGS_PROVIDER_ID), true));
-						providers.add(getWorkspaceProvider(ScannerDiscoveryLegacySupport.MBS_LANGUAGE_SETTINGS_PROVIDER_ID));
-						((ILanguageSettingsProvidersKeeper) cfgDescription).setLanguageSettingProviders(providers);
+						((ILanguageSettingsProvidersKeeper) cfgDescription).setLanguageSettingProviders(ScannerDiscoveryLegacySupport.getDefaultProvidersLegacy());
 					}
 				}
 			}
